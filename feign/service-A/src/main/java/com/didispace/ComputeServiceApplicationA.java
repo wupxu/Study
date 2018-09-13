@@ -14,5 +14,5 @@ public class ComputeServiceApplicationA {
 	public static void main(String[] args) {
 		new SpringApplicationBuilder(ComputeServiceApplicationA.class).web(true).run(args);
 	}
-
+  
 }
