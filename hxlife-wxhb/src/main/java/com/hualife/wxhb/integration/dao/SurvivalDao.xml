@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hualife.wxhb.integration.dao.SurvivalDao">
+	<!--查询契调函报告页面的影像  add by zhangweiwei -->
+	<resultMap id="getImageListByNoteidMap" type="com.hualife.wxhb.domain.entity.TNoteImage">	
+		<result property="imageId" column="image_id" />
+		<result property="imageType" column="image_type" />
+		<result property="imageFile" column="image_file" />
+		<result property="imageName" column="image_name" />
+	</resultMap>
+	<!--契调所有任务映射 -->	 
+	<resultMap id="SurvivalNoteAllTaskMap"    type="com.hualife.wxhb.api.rest.message.pojo.SurvivalNoteAllTask">
+		<result column="survival_note_id" property="survival_note_id"/>
+		<result column="survival_name" property="survival_name"/>		
+		<result column="client_name" property="client_name"/>
+		<result column="survival_no" property="survival_no"/>
+		<result column="survival_reason" property="survival_reason"/>
+		<result column="survival_branch_province" property="survival_branch_province"/>	
+	</resultMap>
+	<!--契调我的任务映射 -->	
+	<resultMap id="SurvivalNoteMyTaskMap"    type="com.hualife.wxhb.api.rest.message.pojo.SurvivalNoteMyTask">
+		<result column="survival_note_id" property="survival_note_id"/>
+		<result column="client_name" property="client_name"/>
+		<result column="is_finish" property="is_finish"/>
+	</resultMap>
+	<!--契调任务信息 -->	
+	<resultMap id="SurvivalNoteTaskListMap"    type="com.hualife.wxhb.api.rest.message.pojo.SurvivalNoteTaskList">
+		<result column="apply_bar_code" property="apply_bar_code"/>
+		<result column="applicant_name" property="applicant_name"/>
+	</resultMap>
+	
+	<!--查询契调函报告页面的影像  add by zhangweiwei -->
+	<select id="getImageListByNoteid" resultMap="getImageListByNoteidMap" parameterType="java.util.HashMap"> 
+			SELECT image_id,note_type, image_file,image_name	
+		      FROM t_note_image a
+			 WHERE a.note_id=(select b.note_id 
+			 				  from t_note_client_note b
+			 				 where b.client_note_id=#{client_note_id}
+			 				  AND  b.note_status_valid='Y')
+			   AND	a.note_type=#{note_type}
+			   AND  a.image_type=#{image_type}
+			   AND  a.image_status='Y'
+	</select>
+	<!-- 根据契调人编号查询契调人信息 add by wangt --> 
+	<select id="getSurvival" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteSurvival">
+		SELECT survival_name,survival_branch_name,survival_branch_code
+		  FROM t_note_survival
+		 WHERE survival_no = #{survival_no}
+	</select>
+	<!-- 根据机构代码查询所有任务 add by wangt --> 
+	<select id="getAllTasks" parameterType="java.util.HashMap" resultMap="SurvivalNoteAllTaskMap">
+	<![CDATA[
+		SELECT survival_note_id,
+		       client_name,
+		       (SELECT survival_name FROM t_note_survival WHERE survival_no = t.survival_no) survival_name,
+		       survival_no,
+		       survival_branch_province,
+		       survival_reason
+		  FROM t_note_survival_invest_note t
+		 WHERE survival_branch_code = #{survival_branch_code}
+		   AND (re_survival_branch_code IS NULL OR re_survival_branch_code = '')
+		   AND (survival_no <> #{survival_no} OR survival_no IS NULL OR survival_no = '')
+		   AND survival_note_id IN
+		       (SELECT client_note_id
+		          FROM t_note_client_note
+		         WHERE note_type = #{note_type}
+		           AND note_status_valid = 'Y'
+		           AND note_status NOT IN (#{down},#{finished}))
+		UNION
+		SELECT survival_note_id,
+		       client_name,
+		       (SELECT survival_name FROM t_note_survival WHERE survival_no = c.survival_no) survival_name,
+		       survival_no,
+		       survival_branch_province,
+		       survival_reason
+		  FROM t_note_survival_invest_note c
+		 WHERE re_survival_branch_code = #{survival_branch_code}
+		   AND (survival_no <> #{survival_no} OR survival_no IS NULL OR survival_no = '')
+		   AND survival_note_id IN
+		       (SELECT client_note_id
+		          FROM t_note_client_note
+		         WHERE note_type = #{note_type}
+		           AND note_status_valid = 'Y'
+		           AND note_status NOT IN (#{down},#{finished}))
+			]]>	
+	</select>
+	<!-- 根据契调人工号查询我的任务 add by wangt --> 
+	<select id="getMyTasks" parameterType="java.util.HashMap" resultMap="SurvivalNoteMyTaskMap">
+	<![CDATA[
+		SELECT survival_note_id, client_name, is_finish
+		  FROM t_note_survival_invest_note
+		 WHERE survival_no = #{survival_no}
+		   AND survival_note_id IN
+		       (SELECT client_note_id
+		          FROM t_note_client_note
+		         WHERE note_type = #{note_type}
+		           AND note_status_valid = 'Y'
+		           AND note_status NOT IN (#{down},#{finished}))
+	]]>
+	</select>
+	<!-- 根据契调函ID查询NoteID add by wangt --> 
+	<select id="getNoteIDBySurvivalNoteId" parameterType="java.lang.String" resultType="java.lang.String">
+		SELECT note_id
+		  FROM t_note_client_note
+		 WHERE client_note_id = #{survival_note_id}
+		   AND note_status_valid = 'Y'
+	</select>
+	<!-- 根据NoteID查询任务保单信息 add by wangt --> 
+	<select id="getTaskLists" parameterType="java.lang.String" resultMap="SurvivalNoteTaskListMap">
+		SELECT apply_bar_code, applicant_name
+		  FROM t_note_client_relation_apply
+		 WHERE note_id = #{note_id}
+	</select>
+	<!-- 契调函报告保存 wupeixu-->
+	<update id="saveSurvivalNoteBySurvivalNoteId" parameterType="com.hualife.wxhb.api.rest.message.request.SurvivalSaveRequestMessage" >
+	   UPDATE t_note_survival_invest_note  
+		  SET survival_note_report = #{survival_note_report} 
+		WHERE survival_note_id = #{survival_note_id}
+	</update>
+	
+	<!-- 契调任务申请SQL，将契调函id与契调人员编号进行绑定  add by linyongtao-->
+	<update id="survivalStateUpdate" parameterType="java.util.HashMap" >
+		update 	t_note_survival_invest_note t  ,
+			    t_note_client_note c
+		   set  t.survival_no=#{survivalNo} ,
+				c.note_status =#{noteStatus},
+				c.note_status_desc=#{noteStatusDesc}
+	     where  t.survival_note_id = c.client_note_id
+		   and  t.survival_note_id=#{survivalNoteId}  
+	</update>
+
+	<!-- 以下部分是处理问卷和报告书部分 add by linyongtao-->
+	<!-- 契约调查报告书预览（保存） -->	
+	<insert id="insertSurvivalProblem" parameterType="java.util.List" >
+		insert into 
+			t_note_survival_note_item_answer 
+			(survival_answer_id,survival_note_id,item_question_id,item_question_name,item_question_answer,item_question_desc,is_valid)
+		values
+	   	<foreach collection="list" index="index" item="item"  separator=",">	   	
+	   		(#{item.survival_answer_id},#{item.survival_note_id},#{item.item_question_id},#{item.item_question_name},#{item.item_question_answer},#{item.item_question_desc},#{item.is_valid})
+		</foreach>
+	</insert>
+	<!-- 根据note_id和note_type查询契调函idsurvival_note_id  add by linyongtao-->
+	<select id="selectSurvivalNoteId" parameterType="java.util.HashMap" resultType="java.lang.String">
+	 	 select  s.survival_note_id 
+	 	   from  t_note_survival_invest_note s , 
+	 	         t_note_client_note c 
+	 	  where  s.survival_note_id =c.client_note_id 
+		    and  c.note_id =#{noteId}  
+		    and  c.note_type =#{noteType})
+		    and  c.note_status_valid = 'Y' 	   
+	</select>
+	<!--客户更改操作后更改契调问卷答案状态，改为无效  add by linyongtao-->
+	<update id="survivalIsValidUpdate" parameterType="java.util.HashMap" >
+		UPDATE  t_note_survival_note_item_answer
+		   SET  is_valid = #{isValidN} 
+		 WHERE  survival_note_id = #{survivalNoteId}
+	</update>
+	 <!-- 契约调查报告完成后需要将状态调为已完成    Y add by linyongtao-->
+ 	<update id="updateNoteItemStatus" parameterType="java.util.HashMap" >
+	   	 update  t_note_survival_invest_note t  
+	   	 	set  t.is_finish=#{noteItemStatus}
+	   	  where  survival_note_id = #{survivalNoteId} 
+	</update>
+	
+	<!-- 契调报告初始化  查询保单信息 add by linyongtao-->
+	<resultMap id="SelectApplayInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.AppliInfo">
+		<result column="applicant_name" property="applicant_name"  jdbcType="VARCHAR"/>
+		<result column="apply_bar_code" property="apply_bar_code"  jdbcType="VARCHAR"/>
+		<result column="insured_name" property="insured_name"  jdbcType="VARCHAR"/>
+	</resultMap>
+	<select id="selectApplayInfo" parameterType="java.lang.String" resultMap="SelectApplayInfoMap">
+		  select  a.applicant_name,
+		 	      max(a.apply_bar_code) apply_bar_code,
+		 	      a.insured_name
+		    from  t_note_client_relation_apply a ,
+		 	      t_note_main m , 
+		 	      t_note_client_note c 
+		   where  a.note_id = m.note_id
+		 	 and  a.note_id = c.note_id
+		 	 and  c.client_note_id = #{survivalNoteId}   
+	</select>
+	
+	<!-- 契调报告初始化  查询契调问题内容 add by linyongtao-->
+ 	<resultMap id="SelectProblemContentsMap" type="com.hualife.wxhb.api.rest.message.pojo.ProblemContent">
+		<result column="item_question_id" property="item_question_id"  jdbcType="VARCHAR"/>
+		<result column="item_question_name" property="item_question_name"  jdbcType="VARCHAR"/>
+		<result column="item_question_answer" property="item_question_answer"  jdbcType="VARCHAR"/>
+		<result column="item_question_desc" property="item_question_desc"  jdbcType="VARCHAR"/>
+	</resultMap> 
+	<select id="getProblemContents" parameterType="java.util.HashMap" resultMap="SelectProblemContentsMap">
+	 	select s1.item_question_id id,
+			   s1.item_question_name item_question_id,
+	 		   s1.item_question_answer,
+	 		   s1.item_question_desc 
+	 	  from t_note_survival_note_item_answer s1,
+			   t_note_survival_invest_note s2
+	 	 where s1.survival_note_id = s2.survival_note_id
+	 	   and s1.survival_note_id = #{survivalNoteId}	
+		   and s2.is_finish = #{noteItemStatus}	
+		   and s1.is_valid = #{isValid}      
+	</select>
+	
+	<!-- 查询该契调报告下的客户上传的图片sql  add by linyongtao-->
+	<resultMap id="getImageInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.ImageInfo">
+		<result column="image_id" property="image_id" jdbcType="VARCHAR"/>	
+		<result column="image_type" property="image_type" jdbcType="VARCHAR"/>	
+		<result column="image_url" property="image_url" jdbcType="VARCHAR"/>
+	</resultMap>
+	<select id="getImageInfo" resultMap="getImageInfoMap" parameterType="java.util.HashMap">	 					   			  
+		   select  i.image_id ,
+ 				   i.image_type ,
+ 				   concat(image_file,image_name) image_url
+ 		     from  t_note_image i,
+ 			       t_note_main m,
+ 			       t_note_client_note c 
+ 			where  i.note_id = m.note_id
+ 			  and  m.note_id =c.note_id
+  			  and  c.note_status_valid ='Y'
+ 			  and  c.client_note_id =#{survivalNoteId}
+ 			  and  i.image_status =#{imageStatus}
+ 			  and  i.note_type =#{noteType}
+ 			  and  i.image_type in(#{imageTypeSIGNATURE},#{imageTypeUPLOAD})
+		  	  		  	   
+	</select>	
+	<!-- 契调通知书 add by yangpeixin -->
+	<select id="getReason" parameterType="String" resultType="String">
+		select		 note_item_type from 
+					 t_note_survival_note_item 
+		  where      survival_note_id = #{id}
+	</select>
+	<!-- 契调通知书 add by yangpeixin -->
+	<resultMap id="survivalInvestInfoMap"    type="com.hualife.wxhb.api.rest.message.response.SurvivalInvestInfoResponseMessage">
+		<result column="client_name" property="client_name"/>
+		<result column="client_idno" property="client_idno"/>
+		<result column="agent_name" property="agent_name"/>
+		<result column="agent_branch_address" property="agent_branch_address"/>
+		<result column="agent_no" property="agent_no"/>
+		<result column="survival_reason" property="survival_reason"/>
+		<result column="special_desc" property="special_desc"/>
+		<result column="survival_mode" property="survival_mode"/>
+		<result column="survival_date" property="survival_date"/>
+	</resultMap>
+	
+	
+	<select id="survivalInvestInfo" parameterType="String" resultMap="survivalInvestInfoMap">
+			select  client_name, 
+					client_idno,
+					agent_name,
+					agent_branch_address,
+					agent_no,
+					survival_reason,
+					special_desc,
+					survival_mode,
+					survival_date
+			  from  t_note_survival_invest_note  
+			  where survival_note_id = #{id}
+	</select>
+	<!-- 契调通知书 add by yangpeixin -->
+	<resultMap id="applicantMap"    type="com.hualife.wxhb.api.rest.message.pojo.Applicant">
+		<result column="apply_bar_code" property="apply_bar_code"/>
+		<result column="applicant_name" property="application_name"/>
+		<result column="applicant_phone" property="applicant_phone"/>
+	</resultMap>
+	
+	<select id="applicant"   parameterType="String" resultMap="applicantMap" >
+		select      apply_bar_code,
+					applicant_name,
+					applicant_phone 
+		  from      t_note_client_relation_apply
+		 where      note_id = #{id}
+	</select>
+
+	<!-- t_note_survival_invest_note 表插入  add by zhanglong-->
+	<insert id = "insertNoteSurvival" parameterType = "com.hualife.wxhb.domain.entity.TNoteSurvivalInvestNote">
+		insert into t_note_survival_invest_note (
+			survival_note_id,client_name,client_age,client_idno,client_sex,
+			agent_file,other_invest,survival_reason,survival_mode,
+			special_desc,survival_branch_province,survival_branch_code,
+			agent_no,agent_name,agent_branch_address,survival_date,is_finish
+		)values(
+			#{survivalNoteId},#{clientName},#{clientAge},#{clientIdno},#{clientSex},
+			#{agentFile},#{otherInvest},#{survivalReason},#{survivalMode},
+			#{specialDesc},#{survivalBranchProvince},#{survivalBranchCode},
+			#{agentNo},#{agentName},#{agentBranchAddress},#{survivalDate},#{isFinish}
+		)
+	</insert>
+	<!-- t_note_survival_note_item 表插入  add by zhanglong-->
+	<insert id = "insertNoteSurvivalItem" parameterType = "java.util.List">
+		<foreach close="" collection="list" index="index" item="item" open="" separator=";">
+			insert into t_note_survival_note_item(
+				survival_note_id,note_item_id,note_item_type
+			)values(
+				#{item.survivalNoteId},#{item.noteItemId},#{item.noteItemType}
+			)
+		</foreach>
+	</insert>
+	<!-- 查询契调函是否存在 add by zhangweiwei-->
+	<select id="countSurvivalNoteByNoteId"  resultType="com.hualife.wxhb.domain.entity.TNoteClientNote" parameterType="java.lang.String" >
+		select  n.note_id,n.note_status
+		  from  t_note_client_note n,t_note_survival_invest_note m
+		 where  m.survival_note_id=#{survivalNoteId}
+		   and  n.client_note_id=m.survival_note_id
+		   and  n.note_status_valid='Y'
+	</select>
+	<!-- 推送函件信息-获取契调函的核保任务序号 wupeixu-->
+	<select id="getSurivivalNoteSeq"   parameterType="java.util.HashMap" resultType="java.lang.String" >
+	    SELECT note_seq 
+	      FROM t_note_client_note 
+	     WHERE note_id=#{noteId}
+	       AND note_type = #{clientNoteType}
+	</select>
+	<!-- 推送函件信息-查询当前契调人工号 和契调内容 wupeixu-->
+	<resultMap id="messageBodySurivivalInfoMap" type="com.hualife.wxhb.integration.soap.message.request.pushMessage.PushMessageBodySurivivalInfo">
+		<result column="survival_no" property="survivalNo"/>
+		<result column="survival_note_report" property="survivalNoteReport"/>
+	</resultMap>
+	<select id="getMessageBodySurivivalInfo"   parameterType="java.util.HashMap" resultType="com.hualife.wxhb.integration.soap.message.request.pushMessage.PushMessageBodySurivivalInfo" >
+	     SELECT survival_no ,survival_note_report 
+	       FROM t_note_survival_invest_note 
+	      WHERE survival_note_id =(
+                SELECT client_note_id 
+                  FROM t_note_client_note 
+                 WHERE note_id=#{noteId}
+                   AND note_type= #{clientNoteType}
+                 )
+                   
+	</select>
+	<!-- 契调报告保存更新客户层函件状态信息  wupeixu-->
+	<update id="updateClientNote" parameterType="java.util.HashMap" >
+		update t_note_client_note
+		   set note_status = #{survivalNoteStatusDown},note_status_desc=#{survivalNoteStatusDownDesc},
+		       note_agent_status= #{noteAgentStatusFinish},note_agent_status_desc=#{noteAgentStatusFinishDesc}
+		 where client_note_id = #{survivalNoteId}
+	</update>
+	<!-- 查询客户层函件下发的所有函件状态 wupeixu -->
+	<resultMap id="getClientNoteStatusByNoteidMap" type="com.hualife.wxhb.domain.entity.TNoteClientNote">
+		<result property="clientNoteId" column="client_note_id" />
+		<result property="noteType" column="note_type" />	
+		<result property="noteStatus" column="note_status" />	
+	</resultMap>
+	<select id="getClientNoteStatusByNoteid" resultType="com.hualife.wxhb.domain.entity.TNoteClientNote"
+				parameterType="java.util.HashMap">		
+			SELECT note_status,client_note_id,note_type
+		      FROM t_note_client_note
+		     where note_id=(SELECT  note_id  
+		                        FROM  t_note_client_note
+							   WHERE  client_note_id = #{survivalNoteId}
+							     AND  note_status_valid='Y'
+							   )
+	</select> 
+	<!-- 更新函件主表信息  add by wupeixu -->
+	<update id="updateMainNote" parameterType="java.util.HashMap" >
+		UPDATE t_note_main a
+		   SET a.note_status = #{note_status},a.updated_date = #{time}
+		 WHERE a.note_id IN (SELECT  b.note_id  
+		                      FROM  t_note_client_note b
+							 WHERE  b.client_note_id = #{client_note_id})
+	</update>
+
+<!-- 根据契调函id查询所属的note_id add by linyongtao
+	<select id="getNoteIdBySurvivalNoteId"  parameterType="java.lang.String" resultType="java.lang.String" >
+	    select c.note_id 
+	      from t_note_client_note c 
+	     where c.client_note_id =#{survivalNoteId}    
+	</select>-->
+	<!-- 批处理推送函件信息处理核心返回报文的接口 查询契调函对应note_id wupeixu-->
+	<select id="getSurivivalForNoteId" parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT m.note_id FROM t_note_main m ,t_note_client_note c  
+		 WHERE m.note_id = c.note_id 
+           AND m.task_code = #{taskCode}
+           AND c.note_seq = #{surNoteSeq}
+	       AND c.note_type = #{clientTypeSurvival}
+	       AND c.note_status_valid = #{validY}
+	</select>
+	<!-- 批处理推送函件信息处理核心返回报文 在t_task_push_note_info变更推送状态 wupeixu-->
+	<update id="updatePushInfoStatus" parameterType="java.util.List" >
+	   <foreach collection="list" item="item" index="index" open="" close="" separator=";">
+		UPDATE t_task_push_note_info
+           SET note_push_status = #{item.surResultType},update_date = #{item.surTime}
+         WHERE note_id = #{item.surivivalForNoteId}
+           AND note_type = #{item.noteFromCoreTypeSurvival}
+      </foreach>    
+	</update>
+	<!-- 契调报告保存后添加轨迹 所用note_id wupeixu-->
+	<select id="getNoteIdForSurvival" parameterType="java.lang.String" resultType="java.lang.String">
+		SELECT note_id 
+		  FROM t_note_client_note 
+		 WHERE client_note_id = #{survivalNoteId}
+	</select>
+<!-- 契调员放弃契调任务  addby linyongtao-->
+	<update id="survivalStateGiveUp" parameterType="java.util.HashMap" >
+		update 	t_note_survival_invest_note t  ,
+			    t_note_client_note c
+		   set  t.survival_no=#{survivalNo} ,
+				c.note_status =#{noteStatus},
+				c.note_status_desc=#{noteStatusDesc}
+	     where  t.survival_note_id = c.client_note_id
+		   and  t.survival_note_id=#{survivalNoteId}  
+	</update>
+	<!-- 批处理推送函件信息处理核心返回报文的接口 查询clientnoteid wupeixu-->
+	<select id="getSurivivalForClientNoteId" parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT client_note_id
+		  FROM t_note_client_note   
+		 WHERE note_id =  #{surivivalForNoteId}
+           AND note_type = #{clientTypeSurvival}
+	</select>
+	<!-- 批处理推送函件信息处理核心返回报文 更改client表状态  wupeixu-->
+	<update id="updateClientStatus" parameterType="java.util.List" >
+		<foreach collection="list" item="item" index="index" open="" close="" separator=";">
+		UPDATE t_note_client_note
+           SET note_status = #{item.survivalNoteStatusWriteoff},note_status_desc=#{item.survivalNoteStatusWriteoffDesc}
+         WHERE client_note_id = #{item.surivivalForClientNoteId}
+        </foreach>
+	</update>
+</mapper>

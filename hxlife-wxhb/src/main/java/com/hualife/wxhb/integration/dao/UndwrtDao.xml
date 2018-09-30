@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hualife.wxhb.integration.dao.UndwrtDao">
+	<!-- 影像映射 -->
+	<resultMap id="ImageInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.ImageInfo">	
+		<result property="image_id" column="image_id" />
+		<result property="image_type" column="image_type" />
+		<result property="image_url" column="image_url" />
+	</resultMap>
+	<!-- 险种映射 -->
+	<resultMap id="UndwrtNoteProductMap" type="com.hualife.wxhb.api.rest.message.pojo.UndwrtNoteProduct">
+		<result column="product_name" property="product_name" />
+		<result column="undwrt_result_reason" property="undwrt_result_reason" />
+		<result column="undwrt_result" property="undwrt_result" />
+		<result column="total_prem" property="total_prem" />
+		<result column="total_occu_add_prem" property="total_occu_add_prem" />
+		<result column="total_health_add_prem" property="total_health_add_prem" />
+		<result column="add_extra_trem_period_type" property="add_extra_trem_period_type" />
+		<result column="add_extra_trem_period" property="add_extra_trem_period" />
+		<result column="exclustion" property="exclustion" />
+		<result column="cut_face_amount" property="cut_face_amount" />
+		<result column="limitd_face_amount" property="limitd_face_amount" />
+		<result column="limitd_units" property="limitd_units" />
+		<result column="postponed_period_type" property="postponed_period_type" />
+		<result column="postponed_period" property="postponed_period" />
+	</resultMap>
+	<!-- 核保函映射 -->
+	<resultMap id="UndwrtAgentNoteInfoResponseMessageMap"    type="com.hualife.wxhb.api.rest.message.response.UndwrtAgentNoteInfoResponseMessage">
+		<result column="agent_phone" property="agent_phone"/>
+		<result column="application_name" property="application_name"/>
+		<result column="insured_name" property="insured_name"/>
+		<result column="applicant_phone" property="applicant_phone"/>
+		<result column="phone_success" property="phone_success"/>
+		<result column="apply_bar_code" property="apply_bar_code"/>
+		<result column="agent_no" property="agent_no"/>
+		<result column="agent_name" property="agent_name"/>
+		<result column="branch_name" property="branch_name"/>
+		<result column="company_address" property="company_address"/>
+		<result column="company_postal_code" property="company_postal_code"/>
+		<result column="insured_age" property="insured_age"/>
+		<result column="created_date" property="created_date"/>
+	</resultMap>
+	
+	<!-- 根据核保涵ID查询NoteID add by wangt --> 
+	<select id="getNoteIDByNoteUndwrtId" parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT note_id
+		  FROM t_note_undwrt_note
+		 WHERE note_undwrt_id = #{note_undwrt_id}
+	</select>
+	<!-- 核保涵提交  add by wangt-->
+	<update id="updateUndwrtStatus" parameterType="java.util.HashMap">		
+		UPDATE t_note_main m INNER JOIN t_note_undwrt_note u ON m.note_id = u.note_id AND note_undwrt_id = #{note_undwrt_id}
+		   SET m.note_status          = #{noteMainStatus},
+		       u.note_status          = #{noteUndwrtStatus},
+		       u.note_status_desc	  = #{noteUndwrtStatusDesc},
+		       u.client_answer_result = #{client_answer_result},
+		       m.updated_date		  = #{updated_date}
+	</update>
+	<!-- 返回银行卡号  add by wangt-->
+	<select id="getAccount_no" parameterType="java.util.HashMap" resultType="java.lang.String">	
+		SELECT account_no
+		  FROM t_note_undwrt_note
+		 WHERE note_undwrt_id = #{note_undwrt_id}		
+	</select>
+	
+	<!-- 更新核保函状态 回销 -->
+	<update id="updateUndwrtEndDeal" parameterType="java.util.HashMap">
+		update t_note_undwrt_note a 
+		   set a.note_status = #{note_status}, 
+		       a.note_status_desc = #{note_status_desc} 
+		 where a.note_undwrt_id=#{note_undwrt_id}
+	</update>
+	
+	<!-- 更新函件主表状态 核保函回销 -->
+	<update id="updateMainStatus" parameterType="java.util.HashMap" >
+		update t_note_main a 
+		   set a.note_status = #{note_status},
+		   	   a.updated_date=#{updated_date}	      
+		 where a.note_id = (select b.note_id 
+		                      from t_note_undwrt_note b 
+		                     where b.note_undwrt_id = #{note_undwrt_id})
+	</update>
+	
+	<!-- 查询险种 add by wangt -->
+	<select id="getProducts" parameterType="java.util.HashMap" resultMap="UndwrtNoteProductMap">	
+		SELECT product_name,
+		       undwrt_result_reason,
+		       undwrt_result,
+		       total_prem,
+		       total_occu_add_prem,
+		       total_health_add_prem,
+		       add_extra_trem_period_type,
+		       add_extra_trem_period,
+		       exclustion,
+		       cut_face_amount,
+		       limitd_face_amount,
+		       limitd_units,
+		       postponed_period_type,
+		       postponed_period
+		  FROM t_note_undwrt_product_result
+		 WHERE note_undwrt_id = #{note_undwrt_id}
+	</select>
+	<!-- 查询影像 add by wangt -->
+	<select id="getImages" resultMap="ImageInfoMap" parameterType="java.util.HashMap">	 
+		SELECT image_id , image_type, CONCAT(image_file, image_name) image_url
+ 			  FROM t_note_image
+		 WHERE note_id = #{note_id}
+		   AND note_type = #{note_type}
+		   AND image_status = 'Y'
+	</select>
+	<!-- 查询核保函基本信息 -->
+	<select id="getUndwrtNote" parameterType="java.util.HashMap" resultMap="UndwrtAgentNoteInfoResponseMessageMap">	
+		SELECT (SELECT applicant_phone FROM t_note_main WHERE note_id = #{note_id}) applicant_phone,
+		       (SELECT phone_success FROM t_note_main WHERE note_id = #{note_id}) phone_success,
+		       (SELECT agent_phone FROM t_note_main WHERE note_id = #{note_id}) agent_phone,
+		       application_name,
+		       insured_name,
+		       created_date,
+		       apply_bar_code,
+		       agent_no,
+		       agent_name,
+		       branch_name,
+		       company_address,
+		       company_postal_code,
+		       insured_age
+		  FROM t_note_undwrt_note
+		 WHERE note_undwrt_id = #{note_undwrt_id}
+	</select>
+	<!-- t_note_undwrt_note 表插入  add by zhanglong-->
+	<insert id="insertNoteUndwrt" parameterType ="com.hualife.wxhb.domain.entity.TNoteUndwrtNote">
+		insert into t_note_undwrt_note (
+			note_id,note_undwrt_id,note_type,apply_bar_code,note_bar_code,
+			account_no,application_no,application_name,insured_no,insured_age,
+			insured_name,note_status,note_status_desc,client_answer_result,
+			agent_no,agent_name,branch_name,company_address,company_postal_code,
+			created_date,note_seq,Deciding_date
+		)values(
+			#{noteId},#{noteUndwrtId},#{noteType},#{applyBarCode},#{noteBarCode},
+			#{accountNo},#{applicationNo},#{applicationName},#{insuredNo},#{insuredAge},
+			#{insuredName},#{noteStatus},#{noteStatusDesc},#{clientAnswerResult},
+			#{agentNo},#{agentName},#{branchName},#{companyAddress},#{companyPostalCode},
+			#{createdDate},#{noteSeq},#{decidingDate}
+		)
+	</insert>
+	<!-- t_note_undwrt_product_result 表插入 add by zhanglong -->
+	<insert id ="insertNoteUndwrtProduct" parameterType ="java.util.List">
+		<foreach close="" collection="list" index="index" item="item" open="" separator=";">
+			insert into t_note_undwrt_product_result (
+				note_undwrt_id,product_code,product_name,undwrt_result,undwrt_result_reason,
+				total_prem,total_occu_add_prem,total_health_add_prem,add_extra_trem_period_type,
+				add_extra_trem_period,exclustion,cut_face_amount,limitd_face_amount,
+				limitd_units,postponed_period_type,postponed_period,created_date
+			)values(
+				#{item.noteUndwrtId},#{item.productCode},#{item.productName},#{item.undwrtResult},#{item.undwrtResultReason},
+				#{item.totalPrem},#{item.totalOccuAddPrem},#{item.totalHealthAddPrem},#{item.addExtraTremPeriodType},
+				#{item.addExtraTremPeriod},#{item.exclustion},#{item.cutFaceAmount},#{item.limitdFaceAmount},
+				#{item.limitdUnits},#{item.postponedPeriodType},#{item.postponedPeriod},#{item.createdDate}
+			)
+		</foreach>
+	</insert>
+		<!-- 根据核保涵ID查询个数 add by zhangweiwei--> 
+	<select id="countUndwrtNoteByNoteId" parameterType="java.lang.String" resultType="com.hualife.wxhb.domain.entity.TNoteUndwrtNote">
+		SELECT note_id
+		  FROM t_note_undwrt_note 
+		 WHERE note_undwrt_id = #{noteUndwrtId}
+	</select>
+	<!-- 推送函件信息核保函 查询核保任务序号和回答结果 wupeixu-->
+	<resultMap id="pushMessageBodyUndwetInfoInfoMap"    type="com.hualife.wxhb.integration.soap.message.request.pushMessage.PushMessageBodyUndwetInfoInfo">
+		<result column="note_seq" property="noteSeq" jdbcType="VARCHAR"/>
+		<result column="client_answer_result" property="clientOption" jdbcType="VARCHAR"/>
+	</resultMap>
+	<select id="getUndwetInfoInfo" resultType="com.hualife.wxhb.integration.soap.message.request.pushMessage.PushMessageBodyUndwetInfoInfo" parameterType="java.util.HashMap">	 
+        SELECT note_seq ,client_answer_result ,apply_bar_code
+          FROM t_note_undwrt_note 
+         WHERE note_id = #{noteId}
+	</select>
+	<!-- 批处理推送函件信息处理核心返回报文的接口 查询核保函对应note_id wupeixu-->
+	<select id="getUndwetForNoteId" parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT u.note_id 
+		  FROM t_note_undwrt_note u ,t_note_main m 
+		 WHERE u.note_id = m.note_id 
+           AND u.note_seq = #{uNoteSeq}
+           AND m.task_code = #{taskCode}
+           AND m.note_type=#{noteType}
+           AND u.apply_bar_code=#{uApplyNo}
+	</select>
+	<!-- 批处理推送函件信息处理核心返回报文 在t_task_push_note_info变更推送状态 wupeixu -->
+	<update id="updatePushInfoStatus"  parameterType="java.util.List">
+	  <foreach collection="list" item="item" index="index" open="" close="" separator=";">
+		UPDATE t_task_push_note_info
+           SET note_push_status = #{item.undResultType},update_date = #{item.undTime}
+         WHERE note_id = #{item.undwetForNoteId}
+           AND note_type = #{item.noteFromCoreTypeUndwrt}
+       </foreach>
+	</update>
+	<!--查询异地影像   add by zhangweiwei -->
+	<select id="getRemoteSignature" resultType="com.hualife.wxhb.domain.entity.TNoteImage" parameterType="java.util.HashMap"> 
+			SELECT image_id,note_type, image_file,image_name	
+		      FROM t_note_image a
+			 WHERE a.note_id=#{noteId}
+			   AND a.note_type=#{noteType}
+			   AND a.image_type=#{imageType}
+			   AND a.image_status='Y'
+	</select>
+	<!-- 批处理推送函件信息处理核心返回报文的接口 成功则更改主表状态为已结束 -->
+	<update id="uMainNoteStatus" parameterType="java.util.HashMap">
+	  <foreach collection="list" item="item" index="index" open="" close="" separator=";">
+		UPDATE t_note_main  
+		   SET note_status= #{item.noteStatusFinished}
+         WHERE note_id = #{item.undwetForNoteId}
+      </foreach>
+	</update>
+</mapper>

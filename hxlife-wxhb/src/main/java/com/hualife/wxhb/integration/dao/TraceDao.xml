@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hualife.wxhb.integration.dao.TraceDao">
+	<!-- 查询函件轨迹流水号代码 add by zhangweiwei-->
+	<select id="getTrackSeqByMap" resultType="java.lang.String"
+				parameterType="java.util.HashMap">		
+		SELECT  count(1)
+          FROM   t_note_trace a
+		 WHERE   a.note_id = #{noteId}
+           AND   a.every_note_id = #{everyNoteId}
+           AND   a.note_type = #{noteType}	   
+	</select> 
+	<!-- 函件轨迹信息插入   add by zhangweiwei -->
+	<insert id = "saveNoteTrace" parameterType ="com.hualife.wxhb.domain.entity.TNoteTrace">
+		insert into t_note_trace(
+			note_id,every_note_id,note_type,track_seq,track_desc,created_date
+		) values (
+			#{noteId},#{everyNoteId},#{noteType},#{trackSeq},#{trackDesc},#{createdDate}
+		)
+	</insert>
+</mapper>

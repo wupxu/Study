@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hualife.wxhb.integration.dao.PhysicalDao">
+	<resultMap id="getClientNoteStatusByNoteidMap" type="com.hualife.wxhb.domain.entity.TNoteClientNote">
+		<result property="clientNoteId" column="client_note_id" />
+		<result property="noteType" column="note_type" />	
+		<result property="noteStatus" column="note_status" />	
+	</resultMap>
+	<!-- 更新体检函信息  add by zhangweiwei -->
+	<update id="updatePhysicalNote" parameterType="java.util.HashMap" >
+		update t_note_physical_exam_note a  
+		<if test=" client_choose_type != null and client_choose_type != ''">
+		   set a.client_choose_type = #{client_choose_type} 
+		</if>
+		<if test=" agent_choose_type != null and agent_choose_type != ''">
+		   set a.agent_choose_type = #{agent_choose_type}, 
+			   a.agent_remark_desc = #{agent_remark_desc}  
+		</if>
+		 where a.physical_note_id = #{physical_note_id}
+	</update>
+	<!-- 更新客户层函件信息  add by zhangweiwei -->
+	<update id="updateClientNote" parameterType="java.util.HashMap" >
+		update t_note_client_note a 
+		   set a.note_status = #{note_status},
+			   a.note_status_desc = #{note_status_desc}, 
+			   a.note_agent_status = #{note_agent_status}, 
+			   a.note_agent_status_desc = #{note_agent_status_desc} 
+		<if test=" note_client_status != null and note_client_status != ''">
+			  ,a.note_client_status = #{note_client_status},
+			   a.note_client_status_desc = #{note_client_status_desc} 
+		</if>
+		where a.client_note_id = #{client_note_id}
+		  and note_status_valid='Y'
+	</update>
+	<!-- 更新函件主表信息  add by zhangweiwei -->
+	<update id="updateMainNote" parameterType="java.util.HashMap" >
+		UPDATE t_note_main a
+		   SET a.note_status = #{note_status},
+	           a.updated_date=#{updated_date}   
+		 WHERE a.note_id = (SELECT  b.note_id  
+		                      FROM  t_note_client_note b
+							 WHERE  b.client_note_id = #{client_note_id}
+							   AND  b.note_status_valid='Y' )
+	</update>
+	<!-- 查询客户层函件信息 add by zhangweiwei-->
+	<select id="getClientNoteStatusByNoteid" resultMap="getClientNoteStatusByNoteidMap"
+				parameterType="java.util.HashMap">		
+			SELECT a.note_status, a.client_note_id, a.note_type
+		      FROM t_note_client_note a
+		     where a.note_id=(SELECT  b.note_id  
+		                    FROM  t_note_client_note b
+						   WHERE  b.client_note_id = #{client_note_id}
+							 and  b.note_status_valid='Y')
+				   
+	</select> 
+	<!-- 查询体检函信息 add by zhangweiwei -->
+	<select id="getPhysicalNoteByNoteid" resultType="com.hualife.wxhb.domain.entity.TNotePhysicalExamNote"
+		parameterType="java.lang.String">		
+			SELECT   physical_note_id
+			  FROM   t_note_physical_exam_note 
+		 	 where   physical_note_id = #{noteId} 
+	</select>
+	
+	<!--实体类与表字段映射 -->
+	 <!-- 体检函初始化sql  add by  linyongtao -->
+ 	 <resultMap id="PhysicalLetterInitResponseMessageMap" type="com.hualife.wxhb.api.rest.message.response.PhysicalLetterInitResponseMessage">
+		<result column="agent_name" property="agent_name" jdbcType="VARCHAR"/>
+	 	<result column="agent_phone" property="agent_phone" jdbcType="VARCHAR"/> 
+		<result column="is_self_health" property="is_self_health" jdbcType="VARCHAR"/>
+	</resultMap> 
+	<!-- 查询 代理人，是否有免检资格的sql-->
+	<select id="selectPhysicalLetter" resultMap="PhysicalLetterInitResponseMessageMap" parameterType="java.lang.String">	 
+		select 
+			agent_name,
+			agent_phone, 
+			t3.is_self_health
+		from 
+			t_note_main t1,
+			t_note_client_note t2,
+			t_note_physical_exam_note t3
+		where 
+			t1.note_id = t2.note_id 
+			and	t2.client_note_id= t3.physical_note_id
+			and t3.physical_note_id = #{physicalNoteId}
+	</select>
+	
+ 	<resultMap id="selectPhysicalItemMap" type="com.hualife.wxhb.api.rest.message.pojo.PhysicalItem">
+		<result column="physical_item" property="physical_item" jdbcType="VARCHAR"/>	
+	</resultMap>
+	<select id="selectPhysicalItem" resultMap="selectPhysicalItemMap" parameterType="java.lang.String">	 
+		select 
+			physical_item 
+		from 
+			t_note_physical_exam_note_item 
+		where 
+			physical_note_id = #{physicalNoteId}
+	</select> 
+		
+	<!--体检函初始化接口： 查询该体检函id下的客户上传的图片sql addby linyongtao-->
+	<resultMap id="selectImageInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.ImageInfo">
+		<result column="image_id" property="image_id" />	
+		<result column="image_type" property="image_type" />	
+		<result column="image_url" property="image_url" />				
+	</resultMap>
+	<select id="selectImageInfo" resultMap="selectImageInfoMap" parameterType="java.util.HashMap">	 			
+		SELECT  
+				i.image_id ,
+				i.image_type  ,
+				concat(image_file,image_name) image_url
+		  FROM
+				t_note_image i,
+				t_note_main m,
+				t_note_client_note c
+		 WHERE  i.note_id = m.note_id	
+		   AND  m.note_id = c.note_id
+		   AND  c.client_note_id = #{physicalNoteId}
+		   AND  i.note_type = #{noteType}
+		   AND  i.image_status = #{imageStatus}
+		   AND  i.image_type in (#{imageTypeSelf},#{imageTypePicture})		   
+	</select>
+	
+<!-- 体检次品addby yangpeixn -->
+	<update id="updatNoteNotQualified" parameterType="java.util.HashMap">
+	     update   t_note_client_note
+			set   note_agent_status = #{agentNoteStatus} ,
+			      note_agent_status_desc= #{agentNoteStatusDesc} ,
+			      note_status = #{noteStatus} , 
+			      note_status_desc = #{noteStatusDesc}, 
+			      not_qualified_reason = #{reason}, 
+			      is_not_qualified_note = #{value}		
+		  where   note_id = #{noteid} 
+		    and   note_type = #{noteType} 
+		    and   note_seq = #{noteSeq}
+		    and   note_status_valid = 'Y'
+		</update>
+	<!-- 回销体检函  add by zhangweiwei -->
+	<update id="updatePhysicalNoteStatus" parameterType="java.util.HashMap">
+	 	UPDATE  t_note_client_note a
+		   SET  a.note_status = #{note_status},
+                a.note_status_desc = #{note_status_desc}
+         WHERE  a.client_note_id =#{client_note_id}
+		            
+	</update>
+<!-- 体检函次品单提交，更改t_note_client_note 表的note_status，和代理人状态为已处理 -->
+	<update id="updateClientStatus" parameterType="java.util.HashMap" >
+		update 
+			t_note_client_note c
+		set 
+			c.note_status = #{noteStatus},
+			c.note_status_desc=#{noteStatusDesc},
+			c.note_agent_status = #{noteAgentStatus},
+  			c.note_agent_status_desc = #{noteAgentStatusDesc}
+		where 
+			c.note_id = #{noteId}
+			and c.note_type = #{noteTypeClient}
+	</update>	
+	<!-- 体检函初始化插入数据 -->
+	<insert id = "insertNotePhysicalExam" parameterType ="com.hualife.wxhb.domain.entity.TNotePhysicalExamNote">
+		insert into t_note_physical_exam_note (
+			physical_note_id,is_self_health
+		) values (
+			#{physicalNoteId},#{isSelfHealth}
+		)
+	</insert>
+	<!-- 体检项目提交,插入t_note_physical_exam_note_item 表  add by zhanglong -->
+	<insert id = "insertPhysicalItem" parameterType = "java.util.List">
+	<foreach close="" collection="list" index="index" item="item" open="" separator=";">
+		insert into t_note_physical_exam_note_item (
+			physical_note_id,physical_item	
+		)values(
+			#{item.physicalNoteId},#{item.physicalItem}
+		)
+	</foreach>	
+	</insert>		
+	<!-- 体检健康函件重新下发状态更改 addby yangpeixn -->
+	<update id="updatNotSecondPhysical"  parameterType="java.util.HashMap">
+		update   t_note_client_note 
+		   set   note_status =#{note_status},
+		   		 note_status_desc = #{note_status_desc},
+		   		 note_status_valid ='N'
+		  where  client_note_id = #{clientId}
+		    and  note_status_valid = 'Y'	
+	</update>
+		<!-- 根据客户层函件id获取函件主表id add by zhangweiwei -->
+ 	<select id="getNoteId" resultType="java.lang.String" parameterType="java.lang.String">	 
+		select  note_id 
+		  from  t_note_client_note
+		 where  client_note_id=#{client_note_id}
+		   and  note_status_valid = 'Y'
+ 	</select>	
+	<!-- 查询体检函信息 add by yangpeixin -->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNotePhysicalExamNote" id="getTNotePhysicalExamNoteMap">
+		<result column="physical_note_id" property="physicalNoteId"/>
+		<result column="client_choose_type" property="clientChooseType"/>
+		<result column="is_upload_self_image" property="isUploadSelfImage"/>
+		<result column="remark_desc" property="remarkDesc"/>
+		<result column="is_self_health" property="isSelfHealth"/>
+		<result column="agent_choose_type" property="agentChooseType"/>
+		<result column="agent_remark_desc" property="agentRemarkDesc"/>
+   </resultMap>
+	
+	<select id="getTNotePhysicalExamNote"  parameterType="java.lang.String"  resultMap="getTNotePhysicalExamNoteMap" >			  
+			select	*
+			  from  t_note_physical_exam_note
+			  where physical_note_id = #{id} 
+	</select>
+	
+	<!-- 查询体检项目信息 add by yangpeixin -->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNotePhysicalExamNoteItem" id="getTNotePhysicalExamNoteItemMap">
+		<result column="physical_note_id" property="physicalNoteId"/>
+		<result column="client_choose_type" property="clientChooseType"/>
+   </resultMap>
+   
+	 <select id="getTNotePhysicalExamNoteItem" parameterType="java.lang.String"   resultMap="getTNotePhysicalExamNoteItemMap"  >
+	 	select *
+	 	  from t_note_physical_exam_note_item
+	 	 where physical_note_id = #{id}
+	 </select>
+	<!--查询主表所有数据 addby yangpeixn-->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNoteMain" id="findTNoteMainMap">
+		<result column="note_id" property="noteId"/>
+		<result column="note_type" property="noteType"/>
+		<result column="client_no" property="clientNo"/>
+		<result column="client_name" property="clientName"/>
+		<result column="applicant_no" property="applicantNo"/>
+		<result column="applicant_name" property="applicantName"/>
+		<result column="applicant_phone" property="applicantPhone"/>
+		<result column="task_code" property="taskCode"/>
+		<result column="note_status" property="noteStatus"/>
+		<result column="agent_no" property="agentNo"/>
+		<result column="agent_name" property="agentName"/>
+		<result column="agent_phone" property="agentPhone"/>
+		<result column="channel_type" property="channelType"/>
+		<result column="push_type" property="pushType"/>
+		<result column="phone_success" property="phoneSuccess"/>
+		<result column="created_date" property="createdDate"/>
+		<result column="updated_date" property="updatedDate"/>
+	</resultMap>	
+	<select id="findTNoteMain" parameterType="java.util.HashMap" resultMap="findTNoteMainMap">
+		  <![CDATA[
+				select  a.*
+				  from  t_note_main a			        				  
+			     where  note_type = #{noteType}
+				   and  task_code = #{taskcode}
+				   and  note_status<>#{status} 
+		  ]]> 
+    </select>
+    <!-- 根据核保任务号、核保序号、函件类型获取客户层id   add  by  zhangweiwei-->
+	<select id="getClientNoteIdByBody" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteClientNote">    
+         SELECT  n.client_note_id,n.note_id
+           FROM  t_note_main m,t_note_client_note n
+          WHERE  m.note_id = n.note_id
+            AND  m.task_code = #{task_code}
+            AND  n.note_seq = #{note_seq}
+            AND  n.note_type=#{note_type}
+            AND  n.note_status=#{noteStatus}   
+            AND  n.note_status_valid='Y'
+	</select>
+	<!-- 根据核保任务号、核保序号、函件类型获取noteid   add  by  zhangweiwei-->
+	<select id="getClientNoteStatusByTaskCode" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteClientNote">    
+         SELECT  n.client_note_id,n.note_id,n.note_status,n.note_type
+           FROM  t_note_main m,t_note_client_note n
+          WHERE  m.note_id = n.note_id
+            AND  m.task_code = #{task_code}
+            AND  n.note_seq = #{note_seq}
+            AND  n.note_status_valid='Y'
+	</select>
+	    <!-- 根据体检函查询体检函信息   add  by  zhangweiwei-->
+	<select id="getClientNoteInfoByNoteId" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteClientNote">    
+         SELECT  n.client_note_id,n.note_id,n.note_status
+           FROM  t_note_client_note n,t_note_physical_exam_note a
+          WHERE  n.client_note_id=a.physical_note_id
+            AND  n.client_note_id=#{physicalNoteId}   
+            AND  n.note_status_valid='Y'
+	</select>
+</mapper>

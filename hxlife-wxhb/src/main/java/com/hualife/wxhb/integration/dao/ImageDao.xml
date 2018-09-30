@@ -1,0 +1,374 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hualife.wxhb.integration.dao.ImageDao">
+	<!-- 影像推送表映射 -->
+	<resultMap id="ImageTaskTableMap"    type="com.hualife.wxhb.domain.dto.ImageTaskTable">
+		<result column="note_id" property="note_id"/>
+		<result column="note_type" property="note_type"/>
+		<result column="image_status" property="image_status"/>	
+		<result column="push_date" property="push_date"/>
+		<result column="created_date" property="created_date"/>		
+	</resultMap>
+	<!-- ID函件类型映射 -->
+	<resultMap id="NoteMap"    type="com.hualife.wxhb.domain.dto.ImageTaskTable">
+		<result column="note_id" property="note_id"/>
+		<result column="note_type" property="note_type"/>
+	</resultMap>
+	<!-- 影像表映射 -->
+	<resultMap id="ImageTableMap"    type="com.hualife.wxhb.domain.dto.ImageTable">
+		<result column="image_id" property="image_id"/>
+		<result column="image_type" property="image_type"/>
+		<result column="image_name" property="image_name"/>	
+		<result column="image_file" property="image_file"/>
+		<result column="created_date" property="created_date"/>
+	</resultMap>
+	
+	<!-- 保存上载推送信息 -->
+	<insert id="saveUpLoad" parameterType="java.util.HashMap" >
+	   INSERT INTO t_task_push_image
+	      (note_id,note_type,professional_id,image_status,push_date,created_date) 
+	   VALUES (#{note_id},#{note_type},#{professional_id},#{waitUpLoad},#{push_date},#{created_date})		
+	</insert>
+	<!-- 保存删除推送信息 -->
+	<insert id="saveDelete" parameterType="java.util.HashMap" >
+	   INSERT INTO t_task_push_image
+	      (note_id,note_type,professional_id,image_status,push_date,created_date) 
+	   VALUES (#{note_id},#{note_type},#{professional_id},#{image_status},#{push_date},#{created_date})		
+	</insert>
+	
+	<!-- 查询需要推送上载的数据 add by wangt -->
+	<select id="getUpLoad" parameterType="java.util.HashMap" resultMap="ImageTaskTableMap">
+		SELECT
+			note_id,
+			note_type,
+			image_status,
+			push_date,
+			created_date
+		FROM
+			t_task_push_image
+		WHERE
+			image_status IN (#{awaitUpLoad},#{failUpLoad})			
+	</select>
+	<!-- 查询条形码 add by wangt -->
+	<select id="getBarCode" parameterType="java.util.HashMap" resultType="java.lang.String">	
+		SELECT
+			note_bar_code
+		FROM
+			t_note_client_note
+		WHERE
+			note_id = #{note_id}
+		AND note_type = #{note_type}	
+		AND note_status_valid = 'Y'
+		UNION
+		SELECT
+			note_bar_code
+		FROM
+			t_note_problem_note
+		WHERE
+			note_id = #{note_id}	
+		UNION
+		SELECT
+			note_bar_code
+		FROM
+			t_note_undwrt_note
+		WHERE
+			note_id = #{note_id}	
+	</select>
+	<!-- 查询需要影推送的像数据 add by wangt -->
+	<select id="getImage" parameterType="java.util.HashMap" resultMap="ImageTableMap">
+	<![CDATA[
+		SELECT
+			image_id,
+			image_type,
+			image_name,
+			image_file,
+			created_date
+		FROM
+			t_note_image
+		WHERE
+			note_id = #{note_id}
+		AND note_type = #{note_type}
+		AND (is_send_suss <> 'Y' OR is_send_suss IS NULL OR is_send_suss = '')
+		AND image_status = 'Y'	
+		]]>	
+	</select>
+
+	<!-- 查询需要推送删除的数据 add by wangt -->
+	<select id="getDelete"  resultMap="NoteMap">
+	<![CDATA[
+		SELECT
+			note_id,
+			note_type
+		FROM
+			t_note_image
+		WHERE
+			(is_send_suss <> 'Y' OR is_send_suss IS NULL OR is_send_suss = '')
+		AND image_status = 'N'
+		]]>			
+	</select>
+	
+	<!-- 更改已上载的状态 add by wangt -->	
+	<update id="updateUpLoad" parameterType="java.util.HashMap">
+		UPDATE t_task_push_image
+		   SET image_status = #{image_status},
+		   	   push_date=#{push_date}
+		 WHERE
+			   note_id = #{note_id}
+		  AND note_type = #{note_type}	
+	</update>	
+	<!-- 更改已删除的状态 add by wangt -->	
+	<update id="updateDelete" parameterType="java.util.HashMap">
+		UPDATE t_task_push_image
+		SET image_status = #{image_status}
+		WHERE
+			note_id = #{note_id}
+		AND note_type = #{note_type}	
+	</update>
+	<!-- 更改影像表推送状态 add by wangt -->	
+	<update id="updateImageNote" parameterType="java.util.HashMap">
+		UPDATE t_note_image
+		SET is_send_suss = #{is_send_suss}
+		WHERE
+			note_id = #{note_id}
+		AND note_type = #{note_type}	
+	</update>
+	<!-- 查询客户层函件的 核保任务号  add by -zhangweiwei-->
+	<select id="getClentNoteSeqByMap" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteClientNote">
+		SELECT  note_seq,client_note_id
+		  FROM  t_note_client_note
+		 WHERE  note_id = #{noteId}
+		   AND  note_type = #{noteType}
+		   AND  note_status_valid='Y'		
+	</select>
+	
+	<!-- 查询问题件的 核保任务号  add by -zhangweiwei-->
+	<select id="getProblemNoteSeqyMap" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteProblemNote">
+		<![CDATA[
+			SELECT	n.note_seq,n.problem_note_id
+		  	  FROM	t_note_main m,t_note_problem_note n
+		     WHERE	m.note_id = n.note_id
+		       and  m.note_id=#{noteId}
+		       AND  m.note_status<>#{noteStatus}
+		   	]]>			 		
+	</select>
+	<!-- 查询核保函的 核保任务号  add by -zhangweiwei-->
+	<select id="getUndwrtNoteSeqByMap" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteUndwrtNote">
+		<![CDATA[	
+			SELECT	n.note_seq,n.note_undwrt_id
+		  	  FROM	t_note_main m,t_note_undwrt_note n
+		     WHERE	m.note_id = n.note_id
+		       and  m.note_id=#{noteId}
+		       AND  m.note_status<>#{noteStatus}	
+		   ]]>		     
+	</select>
+	<!-- 保存影像信息   add by zhangweiwei -->
+	<insert id="saveImageInfo" parameterType="com.hualife.wxhb.domain.entity.TNoteImage" >
+	  INSERT INTO t_note_image(
+				  note_id,
+	              note_type,
+	              professional_id,
+	              image_id,
+	              image_type,
+	              image_name,
+	              image_file,
+	              image_status,
+	              created_date)
+          VALUES  (#{noteId},#{noteType},#{professionalId},#{imageId},#{imageType},#{imageName},#{imageFile},#{imageStatus},#{createdDate})	
+	</insert>
+	<!-- 查询影像信息 add by -zhangweiwei-->
+	<select id="getImageInfoById" parameterType="java.lang.String" resultType="com.hualife.wxhb.domain.entity.TNoteImage">
+			select  image_name,image_file
+	          from  t_note_image 
+	         where  image_id=#{imageId}
+	           and  image_status='Y'       
+	</select>
+		<!-- 查询影像信息  add by -zhangweiwei-->
+	<select id="getImageInfo" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteImage">
+			select  image_name,image_file,image_id,note_type,note_id,image_type
+	          from  t_note_image 
+	         where  note_id=#{noteId}
+	           and	note_type=#{noteType}
+	           and	image_type=#{imageType}
+	           and  image_status='Y'       
+	</select>
+	<!-- 删除影像，更新影像信息 add by wangt -->	
+	<update id="updateImageInfoById" parameterType="java.lang.String">
+	  		 update  t_note_image
+		   		set  image_status = 'N',
+		   		     is_send_suss='N'
+		 	  where  a.image_id = #{imageId}
+	</update>
+		<!-- 删除影像，更新影像信息 add by zhangweiwei -->	
+	<update id="batchUpdateImageInfo" parameterType="java.util.List">
+		  <foreach close="" collection="list" index="index" item="item" open="" separator=";">
+			 update  t_note_image
+		   		set  image_status = 'N'
+		 	  where  note_id=#{item.noteId}
+	            and	 note_type=#{item.noteType}
+	            and	 image_type=#{item.imageType}
+	 		    and  image_status='Y'           
+		 </foreach> 
+	</update>				
+		<!-- 存储影像地址  addby yangpeixin  -->
+		<update id="updateUrl" parameterType="java.util.HashMap">
+			update  t_note_client_note
+			   set  Note_ftp_image_url= #{httpUrl},
+			        Note_image_url= #{ossUrl}
+			 where  client_note_id = #{physicalId}
+			   and  note_status_valid='Y'	     
+		</update>	
+		<!-- 更改推送状态  addby yangpeixin  -->
+		<update id="updatePushImage" parameterType="java.util.HashMap">
+			update  t_task_push_merge
+			   set  push_status= #{status}
+			 where  client_note_id = #{noteId}
+		</update>	
+		<!-- 批处理推送  addby yangpeixin  -->
+		<resultMap type="com.hualife.wxhb.domain.entity.TTaskPushMerge" id="getPushMergeMap">
+			<result column="client_note_id" property="clientNoteId"/>
+			<result column="Note_ftp_image_url" property="NoteFtpImageUrl"/>
+			<result column="phone_ftp_url" property="phoneFtpUrl"/>
+			<result column="push_status" property="pushStatus"/>
+			<result column="create_date" property="createDate"/>
+			<result column="update_date" property="updateDate"/>
+			<result column="channel_type" property="channelType"/>
+	    </resultMap>	
+		<select id="getPushMerge"  parameterType="java.lang.String" resultMap="getPushMergeMap" >	
+		<![CDATA[ 
+			SELECT	*
+		  	  FROM	t_task_push_merge
+		     WHERE  push_status = <>#{status}	
+		]]>		
+		</select>
+		<!--查询图片表数据  addby yangpeixin  -->
+		<resultMap type="com.hualife.wxhb.domain.entity.TNoteImage" id="getTNoteImageMap">
+			<result column="note_id" property="imageId"/>
+			<result column="note_type" property="imageType"/>
+			<result column="image_id" property="noteId"/>
+			<result column="image_type" property="noteType"/>
+			<result column="image_name" property="imageName"/>
+			<result column="image_file" property="imageFile"/>
+			<result column="created_date" property="createdDate"/>
+			<result column="localhost_url" property="localhostUrl"/>
+			<result column="is_send_suss" property="isSendSuss"/>
+			<result column="image_status" property="imageStatus"/>
+	    </resultMap>	
+		<select id="getTNoteImage"  parameterType="java.util.HashMap" resultMap="getTNoteImageMap" >
+			select image_name,
+				   image_file
+			 from  t_note_image
+			where  note_id = #{noteid}
+			  and  image_type = #{type}
+			  and  image_status = 'Y'	   		
+		</select>	
+		
+	<!--查询主表所有数据 addby yangpeixn-->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNoteMain" id="getMainInfoMap">
+		<result column="note_id" property="noteId"/>
+		<result column="note_type" property="noteType"/>
+		<result column="client_no" property="clientNo"/>
+		<result column="client_name" property="clientName"/>
+		<result column="applicant_no" property="applicantNo"/>
+		<result column="applicant_name" property="applicantName"/>
+		<result column="applicant_phone" property="applicantPhone"/>
+		<result column="task_code" property="taskCode"/>
+		<result column="note_status" property="noteStatus"/>
+		<result column="agent_no" property="agentNo"/>
+		<result column="agent_name" property="agentName"/>
+		<result column="agent_phone" property="agentPhone"/>
+		<result column="channel_type" property="channelType"/>
+		<result column="branch_code" property="branchCode"/>
+		<result column="push_type" property="pushType"/>
+		<result column="phone_success" property="phoneSuccess"/>
+		<result column="created_date" property="createdDate"/>
+		<result column="updated_date" property="updatedDate"/>
+	</resultMap>	
+	<select id="getMainInfoById" parameterType="java.lang.String" resultMap="getMainInfoMap">	 
+				select  a.*
+				  from  t_note_main a			        				  
+			     where  note_id = #{id}
+    </select>
+    <!--查询client表所有数据 addby yangpeixn-->
+    <resultMap type="com.hualife.wxhb.domain.entity.TNoteClientNote" id="getClientInfoMap">	
+		<result column="note_id" property="noteId"/>
+		<result column="client_note_id" property="clientNoteId"/>
+		<result column="note_type" property="noteType"/>
+		<result column="note_bar_code" property="noteBarCode"/>
+		<result column="note_seq" property="noteSeq"/>
+		<result column="client_no" property="clientNo"/>
+		<result column="note_status" property="noteStatus"/>
+		<result column="note_status_desc" property="noteStatusDesc"/>
+		<result column="note_reason" property="noteReason"/>
+		<result column="note_agent_status" property="noteAgentStatus"/>
+		<result column="note_agent_status_desc" property="noteAgentStatusDesc"/>
+		<result column="note_client_status" property="noteClientStatus"/>
+		<result column="note_client_status_desc" property="noteClientStatusDesc"/>
+		<result column="is_agent_report" property="isAgentReport"/>
+		<result column="report_note_id" property="reportNoteId"/>
+		<result column="finish_agent_report" property="finishAgentReport"/>
+		<result column="Deciding_date" property="decidingDate"/>
+		<result column="Note_image_url" property="noteImageUrl"/>
+		<result column="Note_ftp_image_url" property="noteFtpImageUrl"/>
+		<result column="second_reason" property="secondReason"/>
+		<result column="is_second_note" property="isSecondNote"/>
+		<result column="is_not_qualified_note" property="isNotQualifiedNote"/>
+		<result column="note_status_valid" property="noteStatusValid"/>
+		<result column="not_qualified_reason" property="notQualifiedReason"/>	
+	</resultMap>   
+	<select id="getClientInfo" parameterType="java.lang.String" resultMap="getClientInfoMap">	 
+				select  a.*
+				  from  t_note_client_note a			        				  
+			     where  client_note_id = #{id}			
+    </select>
+   <insert id= "addTtaskMerge" parameterType = "java.util.HashMap">
+       insert into t_task_push_merge
+		              (client_note_id ,
+				       push_status,
+				       create_date,
+				       manageCom,
+				       channel_type
+		              )
+		 values
+		           ( #{clitentId},
+		             #{pushStatus},
+		             #{time},
+		             #{branchCode},
+		             #{channelType}	 	                          
+		   )
+	</insert>
+
+	<!--根据imageid 删除影像   add by zhangweiwei  -->
+	<delete id="deleteImageInfoById" parameterType="java.lang.String" >	 
+				delete
+				  from  t_note_image 		        				  
+			     where  image_id = #{imageId}			
+     </delete>
+     <!--根据noteid ，notetype,imagetype 删除影像   add by zhangweiwei  -->
+     <delete id="deleteImageInfo" parameterType="java.util.HashMap" >	 
+				delete
+				  from  t_note_image 			        				  
+			     where  note_id=#{noteId}
+	               and	note_type=#{noteType}
+	               and	image_type=#{imageType}	
+     </delete> 	<!-- 批处理表更新   addby yangpeixin  -->
+		<update id="UpdateTtaskMerge" parameterType="java.util.HashMap">
+			update  t_task_push_merge
+			   set  Note_ftp_image_url= #{NoteFtpUrl},
+			   		Note_ftp_image_file_name = {NoteFtpFileName},
+			   		phone_ftp_url = {phoneFtpUrl},
+			   		phone_ftp_file_name ={phoneFtpName},
+			 where  client_note_id = #{id}
+		</update>
+		<!-- 查询需要推送上载的数据 add by wangt -->
+	<select id="getTaskImageCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		SELECT
+			    count(1)
+		 FROM
+			    t_task_push_image
+		WHERE   note_id=#{note_id}
+	      and   note_type=#{note_type}
+	      and   professional_id=#{professional_id}
+		  and   image_status IN (#{waitUpLoad},#{failUpLoad})			
+	</select>	
+	</mapper>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hualife.wxhb.integration.dao.NoteMainDao">
+	<!-- t_note_main 表信息插入 -->
+	<insert id="insertNoteMain"  parameterType="com.hualife.wxhb.domain.entity.TNoteMain">
+		insert into t_note_main (
+			note_id,note_type,client_no,client_name,applicant_no,applicant_name,
+			applicant_phone,task_code,note_status,agent_no,agent_name,
+			agent_phone,channel_type,branch_code,branch_name,push_type,
+			phone_success,created_date,updated_date
+		)values(
+			#{noteId},#{noteType},#{clientNo},#{clientName},
+			#{applicantNo},#{applicantName},#{applicantPhone},#{taskCode},
+			#{noteStatus},#{agentNo},#{agentName},#{agentPhone},
+			#{channelType},#{branchCode},#{branchName},#{pushType},#{phoneSuccess}
+			,#{createdDate},#{updatedDate}
+		)
+	</insert>
+	
+	<!-- t_note_client_relation_apply -->
+	<insert id="insertRelationApply"  parameterType="java.util.List">
+		<foreach close="" collection="list" index="index" item="item" open="" separator=";">
+		insert into t_note_client_relation_apply (
+			note_id,apply_bar_code,applicant_name,applicant_phone,insured_name
+		)values
+		(
+			#{item.noteId},#{item.applyBarCode},#{item.applicantName},
+			#{item.applicantPhone},#{item.insuredName}
+		)
+		</foreach>
+	</insert>
+	<!-- 批量提交 t_note_main 表信息数据   add by zhanglong -->
+	<insert id = "insertNoteMainList" parameterType="java.util.List">
+		<foreach close="" collection="list" index="index" item="item" open="" separator=";">
+			insert into t_note_main (
+				note_id,note_type,client_no,client_name,applicant_no,applicant_name,
+				applicant_phone,task_code,note_status,agent_no,agent_name,
+				agent_phone,channel_type,branch_code,branch_name,push_type,
+				phone_success,created_date,updated_date
+			)values(
+				#{item.noteId},#{item.noteType},#{item.clientNo},#{item.clientName},
+				#{item.applicantNo},#{item.applicantName},#{item.applicantPhone},#{item.taskCode},
+				#{item.noteStatus},#{item.agentNo},#{item.agentName},#{item.agentPhone},
+				#{item.channelType},#{item.branchCode},#{item.branchName},#{item.pushType},#{item.phoneSuccess}
+				,#{item.createdDate},#{item.updatedDate}
+			)
+		</foreach>
+	</insert>
+	<!-- 通过taskcode查询是否已经存在客户层函件 -->
+	<select id = "selectExistsNoteID" parameterType = "com.hualife.wxhb.domain.entity.TNoteMain" resultType = "com.hualife.wxhb.domain.entity.TNoteMain">
+		 select 
+		 	a.note_id 
+		 from t_note_main a 
+		 	where a.task_code = #{taskCode} and a.note_type = #{noteType}
+	</select>
+	
+	<!-- 通过noteid更新noteStatus字段  add by zhanglong -->
+	<update id = "updateMainNoteStatus" parameterType = "com.hualife.wxhb.domain.entity.TNoteMain">
+		update t_note_main a set
+			a.note_status = #{noteStatus}
+		where a.note_id = #{noteId}
+	</update>
+	
+	<!-- 重新下发更新主表 add by zhanglong -->
+	<update id = "updateMainSecondStatus" parameterType = "java.util.Map">
+		update t_note_main a set
+			a.note_status = #{NoteStatus},a.push_type ='',a.phone_success = #{PhoneSuccess},
+			a.updated_date = #{time}
+		where a.note_id = #{noteid}
+	</update>
+</mapper>

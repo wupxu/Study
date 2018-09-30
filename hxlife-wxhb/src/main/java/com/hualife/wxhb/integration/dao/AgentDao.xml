@@ -1,0 +1,677 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hualife.wxhb.integration.dao.AgentDao">
+	<!--查询客户层各类函件状态 add by zhangweiwei-->
+	<resultMap id="getClientNoteStatusByNoteIdMap" type="com.hualife.wxhb.domain.entity.TNoteClientNote">	
+		<result property="noteAgentStatus" column="note_agent_status" />
+		<result property="noteClientStatus" column="note_client_status" />
+		
+		<result property="clientNoteId" column="client_note_id" />
+		<result property="notQualifiedReason" column=" not_qualified_reason" />
+		<result property="noteType" column="note_type" />
+	</resultMap>
+	<!--查询函件主表状态信息 add by zhangweiwei-->
+	<select id="getNoteMainInfoByNoteid" resultType="com.hualife.wxhb.domain.entity.TNoteMain" parameterType="java.lang.String">
+			SELECT note_id ,push_type,client_name,note_status,agent_no,agent_name,branch_name
+		      FROM t_note_main 
+		     WHERE note_id=#{noteId}
+	</select> 
+	
+	<!--查询客户是的高额业务员报告书  add by zhangweiwei -->
+	<select id="getAgentReportInfoByNoteId" resultType="com.hualife.wxhb.domain.entity.TNoteClientNote" parameterType="java.util.HashMap">
+			SELECT  is_agent_report,finish_agent_report 
+			  FROM  t_note_client_note
+			 WHERE  note_id = #{note_id}
+			   AND  note_type = #{note_type}
+			   AND  note_status_valid='Y'
+	</select>  
+	<!--查询客户层各类函件状态 add by zhangweiwei-->
+	<select id="getClientNoteStatusByNoteId" resultMap="getClientNoteStatusByNoteIdMap" parameterType="java.util.HashMap">
+			SELECT note_agent_status,
+				   note_client_status,
+				   client_note_id,
+				   not_qualified_reason,
+				   note_type	 
+			 FROM  t_note_client_note
+			WHERE  note_id = #{note_id}
+			  AND  note_status_valid='Y'
+	</select>  
+	<!-- 函件下发方式时的更改 wupeixu -->
+	<update id="updatePushTypeByNoteId" parameterType="java.util.HashMap">
+		update t_note_main 
+		   set note_status = #{noteStatus},push_type = #{pushType},updated_date= #{time}
+		 where  note_id=#{nodeId}
+	</update>
+	<!-- 查询向函件推送状态表的的数据中的task_code-wupeixu -->
+	<select id="findNotePrintTableTaskCodeByNoteId" parameterType="java.util.HashMap" resultType="java.lang.String" >
+		SELECT task_code  
+		  FROM t_note_main 
+		 WHERE note_id = #{nodeId}
+	</select>
+	<!-- 查询向函件推送状态表的的数据中的note_type,note_seq集合-wupeixu -->
+	<resultMap id="tableMessageMap" type="com.hualife.wxhb.domain.dto.PushnotePrint">	
+		<result property="noteId" column="note_id" />
+		<result property="taskCode" column="task_code" />
+		<result property="noteType" column="note_type" />
+		<result property="noteSeq" column="note_seq" />
+		<result property="notePushStatus" column="note_push_status" />
+		<result property="createDate" column="create_date" />
+		<result property="updateDate" column="update_date" />
+	</resultMap>
+	<select id="findNotePrintTableMessageByNoteId" parameterType="java.util.HashMap" resultMap="tableMessageMap">
+          
+          SELECT a.note_id,a.task_code,b.note_type,b.note_seq
+            FROM t_note_main a,t_note_client_note b
+           WHERE a.note_id = b.note_id
+             AND a.note_id = #{nodeId}
+             AND b.note_status_valid = 'Y'
+            <![CDATA[
+             AND b.note_type <>#{clientTypeSurvival}]]>
+             <if test="noteType!=null and noteType!=''">
+           		 AND b.note_type = #{noteType}
+             </if>
+	</select>
+	<!-- 函件下发方式时选择为机构打印时返回代理人所属渠道 -->
+	<select id="returnPushModeSelectionResponseMessage" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.api.rest.message.response.PushModeSelectionResponseMessage">
+		SELECT channel_type 
+		  FROM t_note_main 
+		 WHERE note_id =#{nodeId}
+	</select>
+	
+	<!-- 函件下发方式选择为自己打印，在推送中间状态表里批量插入信息  wupeixu-->
+	
+	<insert id="addTaskPushnotePrint" useGeneratedKeys="true" parameterType="java.util.List">  
+    INSERT INTO t_task_push_note_print
+      (note_id,task_code,note_type,note_seq,note_push_status,create_date,update_date) 
+    VALUES 
+     <foreach collection="list" item="item" index="index" separator="," >  
+        (#{item.noteId},#{item.taskCode},#{item.noteType},#{item.noteSeq},#{item.notePushStatus},#{item.createDate},#{item.updateDate})  
+     </foreach>  
+   </insert>  
+	<!--给客户转发客户层函件消息   add by  zhangweiwei -->
+	<update id="sendToClientProblem" parameterType="java.util.HashMap">
+		update t_note_problem_note 
+		   set note_status=#{note_status},
+		       note_status_desc=#{note_status_desc}
+		 where note_id=#{note_id}
+	</update>
+	<!--给客户转发客户层函件消息   add by  zhangweiwei-->
+	<update id="sendToClientUndwrt" parameterType="java.util.HashMap">
+			update t_note_undwrt_note 
+		       set note_status=#{note_status},
+		           note_status_desc=#{note_status_desc}
+			 where note_undwrt_id=#{undwrt_note_id} 
+	</update>
+	<!-- 更改 主表状态   add by zhangweiwei -->
+	<update id="updateNoteStatus" parameterType="java.util.HashMap">
+		update t_note_main 
+		   set note_status = #{note_status},
+		       updated_date=#{updated_date}
+		 where note_id=#{note_id}
+	</update>
+	<!-- 获取函件类型信息  add by zhangwweiwei-->
+	<select id="getNoteTypeByNoteId" parameterType="java.util.HashMap" resultType="java.lang.String">
+		select note_type 
+		  from t_note_main 
+		 where note_id=#{noteId}
+		   and note_status=#{noteStatus}
+	</select>
+	<!-- 获取客户层函件类型信息  add by zhangwweiwei-->
+	<select id="getClientNoteTypeByNoteId" parameterType="java.lang.String" resultType="java.lang.String">
+		select note_type 
+		  from t_note_client_note
+		 where client_note_id=#{noteId}
+	</select>
+	<!-- 获取客户层函件类型信息  add by zhangweiwei -->
+	<select id="getClientNoteTypesByNoteId" parameterType="java.lang.String" resultType="com.hualife.wxhb.domain.entity.TNoteClientNote">
+		select note_type,client_note_id 
+		  from t_note_client_note 
+		 where note_id=#{noteId}
+		   and note_status_valid='Y'
+	</select>
+	<!-- 获取问题件id add by zhangweiwei   -->
+	<select id="getProblemNoteByNoteId" parameterType="java.lang.String" resultType="java.lang.String">
+		 select problem_note_id 
+		   from t_note_problem_note
+		  where note_id=#{noteId}
+	</select>
+	<!-- 获取核保id add by zhangweiwei   -->
+	<select id="getUndwrtNoteByNoteId" parameterType="java.lang.String" resultType="java.lang.String">
+		 select note_undwrt_id 
+		   from t_note_undwrt_note
+		  where note_id=#{noteId}
+	</select>
+	<!-- 更新问题件对象状态 add by zhangweiwei-->
+	<update id="updateProblemObjectStatus" parameterType="java.util.HashMap">
+		<![CDATA[
+			update   t_note_problem_object a
+			   set   a.problem_object_status=#{problem_object_status}
+			 where   a.problem_note_id =#{problem_note_id}
+			   and   a.problem_object<>#{problem_object}
+		]]>
+	</update>
+	<!-- linyongtao  add -->
+		
+	<!--实体类与表字段映射  查询该代理人下有多少客户层函件sql-->	 
+	<resultMap id="NoteIdMap" type="com.hualife.wxhb.domain.dto.SelectId">
+		<result column="note_id" property="note_id" />
+	</resultMap>
+	<!-- 客户层函件查询该代理人下有多少客户层函件sqlauthor:linyongtao-->
+	<select id="selectNoteId" resultMap="NoteIdMap" parameterType="java.util.HashMap">	 
+ 	   select 
+ 			   note_id 
+ 		 from 
+ 			   t_note_main 
+ 	    where  agent_no = #{agentNo} 
+ 		  and  note_type = #{noteType} 
+ 		  and  note_status in(#{noteStatusUNPUSH},#{noteStatusPUSHING},#{noteStatusWAITINGPRINT})
+	</select>		
+		
+	<!-- 客户层函件查询该代理人对对应的函件下客户层函件信息sql author:linyongtao-->
+	<resultMap id="MainPageClientInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.ClientNoteInfos">
+		<result column="client_name" property="client_name" jdbcType="VARCHAR" />
+		<result column="note_status" property="note_status" jdbcType="VARCHAR" />
+		<result column="push_type" property="push_type" jdbcType="VARCHAR" />	
+	</resultMap>
+	<select id="mainPageClientInfo" resultMap="MainPageClientInfoMap" parameterType="java.lang.String">	 
+		select 
+ 			   client_name,
+ 			   push_type,
+ 			   note_status
+ 		  from 
+ 			   t_note_main 
+ 		 where 
+ 			   note_id = #{noteId} 	
+ 	</select>
+	
+
+	<!-- 客户层函件投保人+被保人+保单号sql author:linyongtao-->
+	<resultMap id="MainAppliInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.AppliInfo">
+		<result column="apply_bar_code" property="apply_bar_code" jdbcType="VARCHAR" />
+		<result column="applicant_name" property="applicant_name" jdbcType="VARCHAR" />	
+	</resultMap>
+	<select id="mainAppliInfo" resultMap="MainAppliInfoMap" parameterType="java.lang.String">	 
+		select 
+ 			   a.applicant_name,
+ 			   a.apply_bar_code 
+ 		  from 
+ 			   t_note_client_relation_apply a 
+ 		 where note_id = #{noteId} 	
+ 	</select>
+	
+	<!-- 查询查询客户层下的函件类型及状态sql author:linyongtao-->
+	<resultMap id="MainClientNoteTypeMap" type="com.hualife.wxhb.api.rest.message.pojo.ClientNoteType">
+		<result column="note_type" property="note_type" jdbcType="VARCHAR" />
+		<result column="note_reason" property="note_reason" jdbcType="VARCHAR" />	
+	</resultMap>
+	<select id="mainClientNoteType" resultMap="MainClientNoteTypeMap" parameterType="java.lang.String">	 
+ 		select 
+ 			    a.note_type,
+ 			    a.note_reason 
+ 		  from 
+ 			    t_note_client_note a ,
+ 			    t_note_main m 
+ 		 where  a.note_id = m.note_id 
+ 		   and  m.note_id = #{noteId}
+ 	       and  a.note_status_valid ='Y'
+ 	       
+ 	</select>
+	
+	<!-- 查询查询问题件下的函件类型及状态sql author:linyongtao-->
+	<resultMap id="MainPageProblemInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.ProblemNoteInfos">
+		<result column="note_id" property="note_id" jdbcType="VARCHAR" />
+		<result column="apply_bar_code" property="apply_bar_code" jdbcType="VARCHAR" />
+		<result column="applicant_name" property="applicant_name" jdbcType="VARCHAR" />
+		<result column="insured_name" property="insured_name" jdbcType="VARCHAR" />
+		<result column="note_status" property="note_status" jdbcType="VARCHAR" />
+		<result column="problem_note_id" property="problem_note_id" jdbcType="VARCHAR" />				
+	</resultMap>	
+	<select id="mainPageProblemInfo" resultMap="MainPageProblemInfoMap" parameterType="java.util.HashMap">	 
+ 		select m.note_status,
+ 			   a.apply_bar_code,
+ 			   a.applicant_name ,
+ 			   a.insured_name ,
+			   m.note_id ,
+			   p.problem_note_id
+		  from t_note_main m,
+			   t_note_client_relation_apply a,
+			   t_note_problem_note p
+		 where m.note_id = a.note_id 
+		   and m.note_id =p.note_id
+		   and m.agent_no = #{agentNo}	
+		   and m.note_type =#{noteType} 
+		   and m.note_status in(#{noteStatusUNPUSH},#{noteStatusPUSHING},#{noteStatusNOTQUALIFIED})	
+
+ 	</select>
+		
+	<!-- 查询查询核保函下的数据  author:linyongtao-->
+	<resultMap id="MainPageSurvivalInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.UndwrtNoteInfo">
+		<result column="note_id" property="note_id" jdbcType="VARCHAR" />
+		<result column="apply_bar_code" property="apply_bar_code" jdbcType="VARCHAR" />
+		<result column="applicant_name" property="applicant_name" jdbcType="VARCHAR" />
+		<result column="insured_name" property="insured_name" jdbcType="VARCHAR" />
+		<result column="note_status" property="note_status" jdbcType="VARCHAR" />
+		<result column="note_type" property="note_type" jdbcType="VARCHAR" />
+		<result column="note_undwrt_id" property="note_undwrt_id" jdbcType="VARCHAR" />							
+	</resultMap>
+	<select id="mainPageUndwrtInfo" resultMap="MainPageSurvivalInfoMap" parameterType="java.util.HashMap">	 
+		 select 
+			     m.note_status,
+		 	     a.apply_bar_code ,
+		 	     a.applicant_name , 
+			     a.insured_name  ,
+			     m.note_id,
+			     u.note_type,
+			     u.note_undwrt_id
+		   from 
+		         t_note_main m,
+		 	     t_note_client_relation_apply a,
+			     t_note_undwrt_note u 
+		  where  a.note_id = m.note_id 
+		 	and  m.note_id = u.note_id 
+		 	and  m.note_type = #{noteType} 
+		 	and  m.note_status in (#{noteStatusUNPUSH},#{noteStatusPUSHING}) 
+		 	and  m.agent_no =#{agentNo}	
+ 	</select>
+	<!-- 查询问题件NOTEID addby yangpeixin-->
+	<select id="findNoteidByProblem" parameterType="java.util.HashMap" resultType="java.lang.String">
+		  <![CDATA[
+				select  note_id 
+				  from  t_note_main
+			     where  task_code = #{taskcode} 
+				   and  note_type = #{noteType}
+				   and  note_status<>#{status} 
+		  ]]> 
+    </select>
+			
+	<!--查询主表所有数据 addby yangpeixn-->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNoteMain" id="findTNoteMainMap">
+		<result column="note_id" property="noteId"/>
+		<result column="note_type" property="noteType"/>
+		<result column="client_no" property="clientNo"/>
+		<result column="client_name" property="clientName"/>
+		<result column="applicant_no" property="applicantNo"/>
+		<result column="applicant_name" property="applicantName"/>
+		<result column="applicant_phone" property="applicantPhone"/>
+		<result column="task_code" property="taskCode"/>
+		<result column="note_status" property="noteStatus"/>
+		<result column="agent_no" property="agentNo"/>
+		<result column="agent_name" property="agentName"/>
+		<result column="agent_phone" property="agentPhone"/>
+		<result column="channel_type" property="channelType"/>
+		<result column="push_type" property="pushType"/>
+		<result column="phone_success" property="phoneSuccess"/>
+		<result column="created_date" property="createdDate"/>
+		<result column="updated_date" property="updatedDate"/>
+	</resultMap>	
+	<select id="findTNoteMain" parameterType="java.util.HashMap" resultMap="findTNoteMainMap">
+		  <![CDATA[
+				select  a.*
+				  from  t_note_main a,
+				        t_note_problem_note b				  
+			     where  a.note_id = b.note_id 
+				   and  a.note_type = #{noteType}
+				   and  a.task_code = #{taskcode}
+				   and  b.note_seq = #{taskseq}
+				   and  b.note_status<>#{status} 
+		  ]]> 
+    </select>
+    
+    <!-- 查询函件NOTEID addby yangpeixin -->
+    <select id="findNoteidByClient" parameterType="java.util.HashMap" resultType="java.lang.String">
+			select note_id
+			  from t_note_main
+			 where task_code = #{taskcode}
+			   and note_type = #{noteType} 
+    </select>
+ 	<!-- 批处理函件下发 核心返回后提添加通知书路径oss路径和notetype(健康，体检。。)-->
+ 	<update id="setChooseTypeClientNoteUrl" parameterType="java.util.HashMap">
+			UPDATE t_note_url SET 
+			note_type=#{note_type},note_image_url=#{note_image_url},
+			note_oss_url =  #{note_oss_url} WHERE note_id=#{note_id}
+	</update>
+	
+	<select id="countNoSendUnder" resultType="java.lang.String" parameterType="java.util.HashMap">	 
+	  select note_id from t_note_main where note_type=#{note_type} and note_status=#{note_status}
+ 	</select>
+ 	<select id="countNoSendClient" resultType="java.lang.String" parameterType="java.util.HashMap">	 
+	 	 select note_id from t_note_main where note_type=#{note_type} and note_status=#{note_status}
+ 	</select>
+ 	<select id="countNoSendProblem" resultType="java.lang.String" parameterType="java.util.HashMap">	 
+		select note_id from t_note_main where note_type=#{note_type} and note_status=#{note_status}
+ 	</select>
+	<resultMap id="getNoteMainInfoByNoteidMap" type="com.hualife.wxhb.domain.entity.TNoteMain">
+		<result column="note_id" property="noteId"/>
+		<result column="client_name" property="clientName" />
+		<result column="agent_no" property="agentNo" />
+		<result column="agent_name" property="agentName" />
+	</resultMap>
+	
+ 	<resultMap id="getOrderNoInfosByNoteIdMap" type="com.hualife.wxhb.domain.entity.TNoteClientRelationApply">
+		<result column="apply_bar_code" property="applyBarCode" />
+	</resultMap>
+	<!-- 获取投保单好信息 add by zhangweiwei -->
+ 	<select id="getOrderNoInfosByNoteId" resultMap="getOrderNoInfosByNoteIdMap" parameterType="java.lang.String">	 
+		select apply_bar_code 
+		  from t_note_client_relation_apply 
+		 where note_id=#{note_id}
+ 	</select>
+	<!-- 根据消息模板类型获取消息模板 add by zhangweiwei-->
+ 	<select id="getTaskCodeInfo" resultType="com.hualife.wxhb.domain.entity.TTaskCode" parameterType="java.lang.String">	 
+		select mode_id,mode_desc,mode_url 
+		  from t_task_code
+		 where mode_type=#{mode_type}
+ 	</select>
+ 	<!-- 插入一条消息 add by zhangweiwei-->
+ 	 <insert id="insertTTaskPushInfo" parameterType="com.hualife.wxhb.domain.entity.TTaskPushAgentInfo">  
+       INSERT INTO  t_task_push_agent_info
+       				(note_id,mode_id,client_note_id,
+					 push_object_no,push_desc,push_status,
+					created_date)
+            VALUES (#{noteId},#{modeId},#{clientNoteId},
+                    #{pushObjectNo},#{pushDesc},#{pushStatus},
+                    #{createdDate})  
+    </insert>
+    <!--查询消息是否存在 add by zhangweiwei-->
+    <select id="getTaskPushInfoCount" resultType="java.lang.Integer" parameterType="com.hualife.wxhb.domain.entity.TTaskPushAgentInfo">	 
+		select count(1) 
+		  from t_task_push_agent_info 
+		 where note_id=#{noteId} 
+		   and mode_id=#{modeId} 
+		   and client_note_id=#{clientNoteId}
+ 	</select>
+ 	<!-- 获取待处理的体检函通知书 -->
+ 	<resultMap id="reClientInfo" type="com.hualife.wxhb.domain.entity.TNoteClientNote">
+		<result column="client_note_id" property="clientNoteId" />
+		<result column="second_reason" property="secondReason" />	
+	</resultMap>
+	<resultMap id="reProblemInfo" type="com.hualife.wxhb.domain.entity.TNoteProblemNote">
+		<result column="problem_note_id" property="problemNoteId" />
+		<result column="second_reason" property="secondReason" />	
+	</resultMap>
+	<resultMap id="NoticeInfo" type="com.hualife.wxhb.domain.entity.TNoteClientNote">
+		<result column="note_id" property="noteId" />
+		<result column="client_note_id" property="clientNoteId" />	
+	</resultMap>
+ 	<!-- 根据客户层函件id获取函件主表id add by zhangweiwei -->
+ 	<select id="getNoteId" resultType="java.lang.String" parameterType="java.lang.String">	 
+		select note_id 
+		  from t_note_client_note
+		 where client_note_id=#{client_note_id}
+		   and  note_status_valid = 'Y'
+ 	</select>
+ 	<resultMap id="TaskPushInfo" type="com.hualife.wxhb.domain.entity.TTaskPushAgentInfo">
+		<result column="note_id" property="noteId" />
+		<result column="mode_id" property="modeId" />
+		<result column="client_note_id" property="clientNoteId" />
+		<result column="push_object_no" property="pushObjectNo" />
+		<result column="push_desc" property="pushDesc" />
+	</resultMap>
+	<!--  -->
+ 	<select id="getTaskPushInfo" resultMap="TaskPushInfo" parameterType="java.lang.String">
+		 <![CDATA[
+		    select  note_id,mode_id,client_note_id,push_object_no,push_desc 
+		      from  t_task_push_agent_info
+		     where  push_status <>#{pushStatus}
+		 ]]>
+ 	</select>
+ 	<!-- 获取需要重新下发的体检函、健康函信息   add by zhangweiwei-->
+	<select id="countReSendClient" resultMap="reClientInfo" parameterType="java.util.HashMap">	 
+	 	 select client_note_id,second_reason
+	 	   from t_note_client_note
+	 	  where note_type=#{note_type}
+	 	    and note_id=#{note_id}
+ 	</select>
+ 	 <!-- 获取需要重新下发的问题件信息   add by zhangweiwei-->
+ 	<select id="countReSendProblem" resultMap="reProblemInfo" parameterType="java.util.HashMap">	 
+		select problem_note_id,second_reason 
+	      from t_note_problem_note
+	     where note_type=#{note_type}
+	       and note_id=#{note_id}
+ 	</select>
+ 	
+ 	 <!--次品单主表状态处理 addby yangpeixn-->
+ 	<update  id="updateNoteNotQualifiedMain"   parameterType="java.util.HashMap" >
+	 	    update  t_note_main 
+	 	       set  note_status = #{status}
+	 	     where  note_id = #{noteid}	
+ 	</update>
+ <!--次品单主函件状态查询 addby yangpeixn-->
+ 	 <select id="findMainStatus" resultType="java.lang.String" parameterType="java.lang.String">	 
+	   select  note_status
+	 	 from  t_note_main
+	 	where  note_id = #{id}
+ 	</select>
+ 	<!-- 高额业务员报告书提交部分 author:linyongtao-->
+ 	<!-- 根据note_id和note_type查询高额业务员报告书的id   note_report_id-->
+ 	<select id="selectAgentReportId" parameterType="java.lang.String" resultType="java.lang.String">
+		select 	c.report_note_id 
+		  from 	t_note_client_note c
+		 where 	c.client_note_id = #{clientNoteId}
+		   and  c.note_status_valid ='Y'
+	</select>
+	<!-- 高额业务员报告书保存 add by linyongtao-->
+	<insert id="agentReportSave" parameterType="java.util.List" >
+		insert into 
+			t_note_agent_report 
+			(note_report_id,report_question_id,report_question_name,report_question_answer,report_question_desc)
+		values
+        <foreach  collection="list" index="index" item="item" separator=",">
+	   		(#{item.note_report_id},#{item.item_question_id},#{item.item_question_name},#{item.item_question_answer},#{item.item_question_desc})
+		</foreach>
+	</insert>
+	<!-- 更改高额业务员报告书的完成状态，从N到Y -->
+	<update id="noteItemStatusUpdate" parameterType="java.util.HashMap">
+		update  
+			t_note_client_note c 
+		set 
+			c.finish_agent_report = #{finishAgentReport} 
+		where 
+			c.client_note_id = #{clientNoteId} 
+			and c.report_note_id = #{noteReportId}
+	</update>	
+	<!--重新下主表状态处理 addby yangpeixn-->
+ 	<update  id="updateNoteSecondMain"   parameterType="java.util.HashMap" >
+	 	    update  t_note_main 
+	 	       set  note_status = #{status},
+	 	       		updated_date = #{time}
+	 	     where  note_id = #{noteid}	
+ 	</update>
+	<!--查询主表所有数据 addby yangpeixn-->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNoteMain" id="finaAllSecondMessageMap">
+		<result column="note_id" property="noteId"/>
+		<result column="note_type" property="noteType"/>
+		<result column="client_no" property="clientNo"/>
+		<result column="client_name" property="clientName"/>
+		<result column="applicant_no" property="applicantNo"/>
+		<result column="applicant_name" property="applicantName"/>
+		<result column="applicant_phone" property="applicantPhone"/>
+		<result column="task_code" property="taskCode"/>
+		<result column="note_status" property="noteStatus"/>
+		<result column="agent_no" property="agentNo"/>
+		<result column="agent_name" property="agentName"/>
+		<result column="agent_phone" property="agentPhone"/>
+		<result column="channel_type" property="channelType"/>
+		<result column="push_type" property="pushType"/>
+		<result column="phone_success" property="phoneSuccess"/>
+		<result column="created_date" property="createdDate"/>
+		<result column="updated_date" property="updatedDate"/>
+	</resultMap>
+	
+	
+	<select id="finaAllSecondMessage"  parameterType="String"  resultMap="finaAllSecondMessageMap" >
+		  
+		select   noteType,
+			     clientNo,
+			     clientName,
+			     applicantNo,
+			     applicantName,
+			     applicantPhone,
+			     taskCode,
+			     agentNo,
+			     agentName,
+			     agentPhone,
+			     agent_name,
+			     channelType,
+		     	 pushType,
+			     phoneSuccess,
+			     to_date(#{createdDate},'yyyy-MM-dd'),
+			     to_date(#{updatedDate},'yyyy-MM-dd'),
+			    
+		from    t_note_main 
+		where  note_id = #{id} 
+	</select>
+	
+	<!--  批量更新客户层函件状态   add by zhangweiwei -->
+	<update id="batchUpdateClientNote" parameterType="java.util.List" >
+		 <foreach close="" collection="list" index="index" item="item" open="" separator=";">
+			 <![CDATA[
+			 	update t_note_client_note  a  
+	   		       set  a.note_status=#{item.noteStatus},
+	   		    	    a.note_status_desc=#{item.noteStatusDesc},
+	   		    	    a.note_agent_status=#{item.noteAgentStatus},
+	   		    	    a.note_agent_status_desc=#{item.noteAgentStatusDesc}
+	   		     where  a.client_note_id=#{item.clientNoteId}		
+			       and  a.note_type <>#{item.noteType}
+			    ]]>
+		 </foreach>
+	</update>
+	<!-- 批处理rest接口中为机构打印时组织报文 查询note_type,note_seq集合-wupeixu -->
+	<resultMap id="restMessageMap" type="com.hualife.wxhb.integration.soap.message.request.chooseTypePush.ChooseTypePushRequestBodyNoteClient">	
+		<result property="note_type" column="note_type" />
+		<result property="note_seq" column="note_seq" />
+	</resultMap>
+	<select id="findNoteRestMessageByNoteId" parameterType="java.util.HashMap" resultMap="restMessageMap">
+          <![CDATA[
+           SELECT note_type,note_seq 
+         FROM t_note_client_note 
+        WHERE note_id = #{nodeId}  
+          AND note_type <> #{clientTypeSurvival} ]]>
+	</select>
+	<!-- 批处理函件打印 ,通过查询中间表获取核心所需参数报文-wupeixu -->
+	<resultMap id="chooseMessageMap" type="com.hualife.wxhb.integration.soap.message.request.notePrintPush.NotePrintPushBodyNotes">	
+		<result property="note_type" column="note_type" />
+		<result property="note_seq" column="note_seq" />
+		<result property="taskcode" column="task_code" />
+	</resultMap>
+	<select id="findChooseTypeClientBodys" parameterType="java.util.HashMap" resultMap="chooseMessageMap">
+         SELECT note_type,note_seq ,task_code
+           FROM t_task_push_note_print
+          WHERE note_push_status =#{pushStatusUnsend} 
+             OR note_push_status=#{pushStatusFailed}
+          LIMIT 20
+	</select>
+	<!-- 批处理函件打印 把打印结果存储到t_task_push_note_print表 -->
+    <update id="setTTaskPushNotePrint"  parameterType="java.util.List">  
+         <foreach collection="list" item="item" index="index" open="" close="" separator=";">
+          update t_task_push_note_print
+          set note_push_status=#{item.printResult},update_date=#{item.time}
+         WHERE note_seq= #{item.noteSeq} 
+           AND note_type = #{item.noteType}
+           AND task_code = #{item.taskCode}
+       </foreach>      
+	</update>
+	<!-- 批处理函件打印时核心返回报文后 把oss路径和ftp路径,业务员查看状态到clentnote表 wupeixu -->
+	<update id="setClientUrlAndStatus" parameterType="java.util.List">
+	   <foreach collection="list" item="item" index="index" open="" close="" separator=";">
+		UPDATE t_note_client_note c ,t_note_main m 
+		   SET Note_image_url= #{item.noteOssUrl},Note_ftp_image_url= #{item.noteImageUrl},
+		       note_agent_status= #{item.noteAgentStatusLoading},note_agent_status_desc=#{item.noteAgentStatusLoadingDesc}
+		 WHERE m.note_id = c.note_id 
+           AND c.note_type =#{item.noteType} 
+           AND c.note_seq = #{item.noteSeq}
+           AND m.task_code = #{item.taskCode}
+       </foreach> 
+	</update>
+	<!-- 更改client_note表的状态  健康函 体检函  wupeixu-->
+	<update id="updateClientNoteStutas" parameterType="java.util.HashMap">
+       UPDATE t_note_client_note 
+          SET note_status  = #{physicalOrHealthNoteStatusLinedown},note_status_desc=#{physicalOrHealthNoteStatusLinedownDesc}
+           <if test="noteAgentStatusProducting != null and noteAgentStatusProducting!=''">  ,note_agent_status = #{noteAgentStatusProducting}</if>
+           <if test="noteAgentStatusProductingDesc != null and noteAgentStatusProductingDesc!=''">  ,note_agent_status_desc=#{noteAgentStatusProductingDesc} </if>
+        WHERE client_note_id IN (
+              SELECT temp.client_note_id FROM(
+                     SELECT client_note_id 
+                       FROM t_note_client_note 
+                      WHERE note_id = #{nodeId}  
+                        AND (note_type = #{clientTypeHealth} OR note_type = #{clientTypePhysical})
+                 )temp 
+          )
+	</update>
+	<!-- 更改client_note表的状态  财务函  wupeixu-->
+	<update id="updateClientNoteStutasForFina" parameterType="java.util.HashMap">
+       UPDATE t_note_client_note 
+          SET note_status  = #{finaNoteStatusLinedown},note_status_desc=#{finaNoteStatusLinedownDesc}
+           <if test="noteAgentStatusProducting != null and noteAgentStatusProducting !=''">  ,note_agent_status = #{noteAgentStatusProducting}</if>
+           <if test="noteAgentStatusProductingDesc != null and noteAgentStatusProductingDesc !=''">  ,note_agent_status_desc=#{noteAgentStatusProductingDesc} </if>
+        WHERE client_note_id IN (
+              SELECT temp.client_note_id FROM(
+                     SELECT client_note_id 
+                       FROM t_note_client_note 
+                      WHERE note_id = #{nodeId}  
+                        AND (note_type = #{clientTypeFina})
+                 )temp 
+          )
+	</update>
+	<!--  批量更新客户层函件状态   add by zhangweiwei -->
+	<update id="batchUpdateTTaskPushAgentInfo" parameterType="java.util.List" >
+		 <foreach close="" collection="list" index="index" item="item" open="" separator=";">
+			 <![CDATA[
+			 	update t_task_push_agent_info  a  
+	   		       set  a.push_status=#{item.pushStatus}
+	   		     where  a.client_note_id=#{item.clientNoteId}		
+			       and  a.mode_id =#{item.modeId}
+			       and  a.note_id=#{item.noteId}
+			    ]]>
+		 </foreach>
+	</update>	 
+	<!-- 查询数据库里是否有函件打印方式 wupeixu -->
+	<select id="findPushTypeByNoteId" parameterType="java.lang.String" resultType="java.lang.String">
+         SELECT push_type FROM t_note_main WHERE note_id= #{nodeId}
+	</select>
+	
+	<!-- 查询代理人是否已提交高额业务员报告书   addby linyongtao-->
+	<select id="getAgentReportContents" parameterType="java.lang.String" resultType="java.lang.Long">
+		select  count(1) 
+		  from  t_note_agent_report  
+		 where  note_report_id = (
+		select  report_note_id 
+		  from  t_note_client_note 
+		 where  note_status_valid ='Y' 
+		   and  client_note_id =#{clientNoteId}) 
+	</select>
+	
+	<!-- 删除代理人已提交的高额业务员报告书  addby linyongtao-->
+	<delete id="deleteAgentReport" parameterType="java.lang.String" >
+		DELETE  from t_note_agent_report 
+		 where  note_report_id =(
+		select  report_note_id 
+		  from  t_note_client_note 
+		 where  note_status_valid ='Y' 
+		   and  client_note_id =#{clientNoteId}) 
+	</delete>	
+	
+	<!-- 更改业务员报告书的完成状态  addby linyongtao-->
+    <update id="updateAgentReportStatus"  parameterType="java.util.HashMap">  
+       	  update  t_note_client_note 
+       	     set  finish_agent_report =#{finishAgentReport}
+       	   where  client_note_id =#{clientNoteId} 
+       	     and  note_status_valid ='Y'      
+	</update>
+	<!-- 查询前端传来的代理人工号是否正确 -->
+	<select id="selectExitByAgentNo" parameterType="java.lang.String" resultType="java.lang.Long">
+		select  count(1) 
+		  from  t_note_main  
+		 where  agent_no=#{agentNo}
+	</select>	
+	<!--获取client表的client_note_id，note_type wupeixu -->
+	<resultMap id="clientMessageMap" type="com.hualife.wxhb.domain.dto.ClientMessage">	
+		<result property="client_note_id" column="client_note_id" />
+		<result property="note_type" column="note_type" />
+	</resultMap>
+	<select id="findNoteType" parameterType="java.lang.String" resultMap="clientMessageMap">
+		SELECT client_note_id,note_type 
+		  FROM t_note_client_note 
+		 WHERE note_id = #{nodeId}
+	</select>	
+</mapper>

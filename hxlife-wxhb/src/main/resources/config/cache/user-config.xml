@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<application xmlns="http://www.primeton.com/xmlns/eos/1.0">
+    <module name="CacheProvider">
+        <group name="Guava">
+            <configValue key="Clazz">com.hualife.foundation.component.cache.guava.GuavaCacheProvider</configValue>
+            <configValue key="MaxMumSize">0</configValue>
+        </group>
+        <group name="Redis1">
+            <configValue key="Clazz">com.hualife.foundation.component.cache.redis.single.RedisSingleCacheProvider</configValue>
+            <configValue key="CacheHost">Host1</configValue>
+        </group>
+        <group name="Redis2">
+            <configValue key="Clazz">com.hualife.foundation.component.cache.redis.cluster.RedisClusterCacheProvider</configValue>
+            <configValue key="CacheCluster">Cluster1</configValue>
+        </group>
+    </module>
+    <module name="CacheHost">
+        <!--<group name="Host1">
+            <configValue key="Address">r-tj76ecac9c1ecba4.redis.rds.aliyuncs.com:6379</configValue>
+            <configValue key="Password">r-tj76ecac9c1ecba4:Hx93480dsa</configValue>
+            <configValue key="TimeOut">10</configValue>
+            <configValue key="ConnectionPool">Pool1</configValue>
+        </group>-->
+		<group name="Host1">
+            <configValue key="Address">10.0.18.41:8400</configValue>
+            <configValue key="Password">NONE</configValue>
+            <configValue key="TimeOut">10</configValue>
+            <configValue key="ConnectionPool">Pool1</configValue>
+        </group>
+    </module>
+    <module name="CacheCluster">
+        <group name="Cluster1">
+            <configValue key="Address">10.139.96.51:6379:NONE;10.139.96.51:9092:NONE;10.139.98.35:6379:NONE;10.139.98.35:9092:NONE;10.139.100.88:6379:NONE;10.139.100.88:9092:NONE</configValue>
+            <configValue key="TimeOut">10</configValue>
+            <configValue key="ConnectionPool">Pool1</configValue>
+        </group>
+    </module>
+    <module name="CacheConnectionPool">
+        <group name="Pool1">
+            <configValue key="MaxActive">50</configValue>
+            <configValue key="MaxIdle">5</configValue>
+            <configValue key="MaxWait">100</configValue>
+            <configValue key="TestOnBorrow">true</configValue>
+        </group>
+    </module>
+</application>

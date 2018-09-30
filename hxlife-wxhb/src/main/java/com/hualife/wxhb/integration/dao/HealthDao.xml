@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hualife.wxhb.integration.dao.HealthDao">
+	<!-- 健康函信息 -->
+	<resultMap id="HealthNoteInitResponseMessageMap"   type="com.hualife.wxhb.api.rest.message.response.HealthNoteInitResponseMessage">
+		<result column="agent_name" property="agent_name"/>
+		<result column="agent_phone" property="agent_phone"/>
+		<result column="client_name" property="client_name"/>
+		<result column="other_invest" property="other_invest"/>
+		<result column="special_desc" property="special_desc"/>
+		<result column="client_age" property="client_age"/>
+		<result column="client_sex" property="client_sex"/>
+	</resultMap>
+	<!-- 健康问题卷信息 -->
+	<resultMap id="HealthNoteItemMap"   type="com.hualife.wxhb.api.rest.message.pojo.HealthNoteItem">
+		<result column="note_item_id" property="note_item_id"/>
+		<result column="note_item_type" property="note_item_type"/>
+		<result column="note_item_status" property="note_item_status"/>
+	</resultMap>
+	<!--影像信息 -->
+	<resultMap id="ImageInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.ImageInfo">	
+		<result property="image_id" column="image_id" />
+		<result property="image_type" column="image_type" />
+		<result property="image_url" column="image_url" />
+	</resultMap>
+	<!-- 根据健康涵ID查询NoteID add by wangt --> 
+	<select id="getNoteIDByHealthNoteId" parameterType="java.util.HashMap" resultType="java.lang.String">
+		SELECT note_id
+		  FROM t_note_client_note
+		 WHERE client_note_id = #{health_note_id}
+		   AND note_status_valid = 'Y'
+	</select>
+	<!-- 查询影像信息 add by wangt -->
+	<select id="getImages" resultMap="ImageInfoMap" parameterType="java.util.HashMap">	 
+		SELECT image_id, image_type, CONCAT(image_file, image_name) image_url
+ 			  FROM t_note_image
+		 WHERE note_id = #{note_id}
+		   AND image_type = #{image_type}
+		   AND note_type = #{note_type}
+		   AND image_status = 'Y'
+	</select>	
+	<!-- 查询健康问题卷信息 add by wangt -->
+	<select id="getHealthNoteItem"  resultMap="HealthNoteItemMap"   parameterType="java.util.HashMap" >		
+		SELECT note_item_id, note_item_type, note_item_status
+		  FROM t_note_health_note_item
+		 WHERE health_note_id = #{health_note_id}
+	</select>
+	<!-- 查询健康函信息 add by wangt -->
+	<select id="getHealthNote"  resultMap="HealthNoteInitResponseMessageMap"   parameterType="java.util.HashMap" >		
+		SELECT
+			(SELECT agent_name FROM t_note_main WHERE note_id = #{note_id}) agent_name,
+			(SELECT agent_phone FROM t_note_main WHERE note_id = #{note_id}) agent_phone,
+			client_name,
+			other_invest,
+			special_desc,
+			client_age,
+               client_sex
+		FROM
+			t_note_health_note
+		WHERE
+			health_note_id = #{health_note_id}
+	</select>		
+	<!-- 健康函提交 addby yangpeixin -->
+	<select id="getNoteId" parameterType="java.lang.String"	resultType="java.lang.String">
+	 select    note_id from t_note_client_note 
+	  where    client_note_id = #{id} 
+	    and    note_status_valid = 'Y'		
+	</select>
+       <!-- 健康函提交   客户查看状态addby yangpeixin -->	
+	<update id="update_note_client_status" parameterType="java.util.HashMap">
+	update    t_note_client_note 
+		set   note_client_status=#{clientstatus} ,
+		      note_client_status_desc=#{clientstatusDesc}
+	 where    client_note_id = #{noteid}
+	   and    note_status_valid = 'Y' 
+	</update>	
+	<!-- 健康函提交   代理人查看状态addby yangpeixin -->	
+	<update id="update_agent" parameterType="java.util.HashMap">
+			 update    t_note_client_note 
+				set    note_agent_status=#{agentstatus} ,
+				       note_agent_status_desc=#{agentstatusDesc}
+			  where    client_note_id = #{noteid}
+			    and    note_status_valid = 'Y'    
+	
+	</update>
+	<!-- 健康函提交 逻辑状态 addby yangpeixin -->
+	<update id="update_status" parameterType="java.util.HashMap">
+	 update    t_note_client_note 
+		set    note_status= #{status},
+		       note_status_desc= #{statusDesc}
+  	  where    client_note_id = #{noteid}
+	
+	</update>
+	<!-- 健康函提交 函件状态 addby yangpeixin -->
+	<select id="findClinetstatus" parameterType="java.util.HashMap"   resultType="java.lang.String">		
+			select   note_status 
+			  from   t_note_client_note
+			 where   note_id = #{noteid}	
+			   and   note_type= #{noteType}
+			   and   note_status_valid = 'Y'			
+	</select>
+	<!-- 主表状态 addby yangpeixin -->
+	<update id="update_mian" parameterType="java.util.HashMap">
+		 update  t_note_main
+			set  note_status = #{status}
+		  where  note_id = #{noteid}		
+	</update>
+	<!--健康问卷部分 -->	
+	 <!-- author:linyongtao -->		 		
+	<!--实体类与表字段映射 -->
+ 	<resultMap id="TNoteHealthNoteItem" type="com.hualife.wxhb.domain.entity.TNoteHealthNoteItem">
+		<result column="health_note_id" property="healthNoteId" jdbcType="VARCHAR"/>
+		<result column="note_item_id" property="noteItemId" jdbcType="VARCHAR"/>
+		<result column="note_item_type" property="noteItemType" jdbcType="VARCHAR"/>
+		<result column="note_item_status" property="noteItemStatus" jdbcType="VARCHAR"/>			
+	</resultMap>
+	<!-- 根据note_id和note_type查询财务问卷note_item_id add by:linyongtao-->	
+	<select id="selectHealthNoteItemId" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteHealthNoteItem">
+	   select  h1.health_note_id,
+			   h1.note_item_id 
+		 from  t_note_health_note_item h1,
+			   t_note_health_note h2 ,
+			   t_note_client_note c1 
+		where  h1.health_note_id = h2.health_note_id 
+		  and  h2.health_note_id = c1.client_note_id 
+		  and  c1.note_id =#{noteId}
+		  and  h1.note_item_type = #{noteItemType} 
+	</select> 
+	
+	<!-- 健康问卷  保存 -->	
+	<!-- author:linyongtao -->			
+	<insert id="healthReportSave" parameterType="java.util.List" >
+		insert into 
+			t_note_health_note_item_answer 
+			(note_item_id,item_question_id,item_question_name,item_question_answer,item_question_desc)
+		values
+        <foreach  collection="list" index="index" item="item" separator=",">
+	   		(#{item.note_item_id},#{item.item_question_id},#{item.item_question_name},#{item.item_question_answer},#{item.item_question_desc})
+		</foreach>
+	</insert>	 
+	<!--健康问卷提交后需要改变t_note_health_note_item 中的note_item_status  问卷回答状态(Y-已经完成，N-未完成)-->
+	<!-- author:linyongtao -->					
+	<update id="updateNoteItemStatus" parameterType="java.util.HashMap" >
+		update  t_note_health_note_item h1 
+		   set  h1.note_item_status = #{noteItemStatus}
+		 where  h1.note_item_id = #{noteItemId}
+	</update>
+		
+<!-- 健康函次品单提交，更改t_note_client_note 表的note_status，和代理人状态为已处理 -->
+	<update id="updateClientStatus" parameterType="java.util.HashMap" >
+		update 
+			t_note_client_note c
+		set 
+			c.note_status = #{noteStatus},
+			c.note_status_desc=#{noteStatusDesc},
+			c.note_agent_status = #{noteAgentStatus},
+  			c.note_agent_status_desc = #{noteAgentStatusDesc}
+		where 
+			c.note_id = #{noteId}
+			and c.note_type = #{noteTypeClient}
+	</update>
+	<!-- 健康次品 -->
+	<!-- 健康次品 addby yangpeixn-->		
+	<update id="updatNoteNotQualified" parameterType="java.util.HashMap">
+		      update    t_note_client_note
+		         set    note_agent_status = #{agentNoteStatus} ,
+			            note_agent_status_desc= #{agentNoteStatusDesc} ,
+			            note_status = #{noteStatus} , 
+			            note_status_desc = #{noteStatusDesc}, 
+			            not_qualified_reason = #{reason}, 
+			            is_not_qualified_note = #{value}		
+		        where   note_id = #{noteid}  
+		          and   note_type = #{noteType} 
+		          and   note_seq = #{noteSeq}
+	              and   note_status_valid = 'Y'
+	</update>
+	<!-- 健康回销   add by zhangweiwei-->
+	<update id="updateHealthNoteStatus" parameterType="java.util.HashMap">
+	    UPDATE  t_note_client_note a
+		   SET  a.note_status = #{note_status},
+                a.note_status_desc = #{note_status_desc}
+         WHERE  a.client_note_id = #{client_note_id}
+		          
+	</update>
+	
+	<!-- t_note_health_note信息插入 add by zhanglong -->
+	<insert id = "insertNoteHealth" parameterType = "com.hualife.wxhb.domain.entity.TNoteHealthNote"> 
+	  	insert into t_note_health_note (
+	  		health_note_id,client_name,client_age,client_sex,special_desc,other_invest
+	  	)values(
+	  		#{healthNoteId},#{clientName},#{clientAge},#{clientSex},#{specialDesc},#{otherInvest}
+	  	)
+	</insert>
+	<!-- t_note_health_note_item 信息插入 add by zhanglong -->
+	<insert id = "insertNoteHealthItem" parameterType = "java.util.List">
+		  <foreach close="" collection="list" index="index" item="item" open="" separator=";">
+		  
+		  	insert into t_note_health_note_item (
+				health_note_id,note_item_id,note_item_type,note_item_status	  	
+		  	)values(
+		  		#{item.healthNoteId},#{item.noteItemId},#{item.noteItemType},#{item.noteItemStatus}
+		  	)
+		  </foreach>
+	</insert>
+	<!-- 健康重新下发 addby yangpeixn-->
+	<update id="updatSecondHealth" parameterType="java.util.HashMap">
+		      update    t_note_client_note
+		         set    note_status = #{noteStatus} , 
+			            note_status_desc = #{noteStatusDesc}, 		
+		        where   note_id = #{noteid}  
+		          and   note_type = #{noteType} 
+		          and   note_seq = #{noteSeq}
+	              and   note_status_valid = 'Y'
+	</update>
+	<!-- 客户转交代理人处理，代理人上传/提交财务函 addby yangpeixin-->
+	<update id="healthSubmitAgent"   parameterType="java.util.HashMap" >		
+			update  t_note_client_note t1,
+			    t_note_health_note f1 
+		   set  t1.note_status = #{noteStatus},
+			    t1.note_status_desc = #{noteStatusDesc},
+			    t1.note_agent_status = #{noteAgentStatus},
+			    t1.note_agent_status_desc = #{noteAgentStatusDesc},
+			    f1 .agent_remark_desc = #{agentRemarkDesc}	
+		 where  t1.client_note_id =f1.health_note_id
+		   and	t1.client_note_id=#{clientNoteId} 
+	</update>
+	<!-- 根据核保任务号、核保序号、函件类型获取客户层id   add  by  zhangweiwei-->
+	<select id="getClientNoteIdByBody" parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteClientNote">
+		 SELECT  n.client_note_id,n.note_id
+           FROM  t_note_main m,t_note_client_note n
+          WHERE  m.note_id = n.note_id
+            AND  m.task_code = #{task_code}
+            AND  n.note_seq = #{note_seq}
+            AND  n.note_type=#{note_type}
+            AND  n.note_status=#{noteStatus}
+            AND  n.note_status_valid='Y'
+	</select>	
+	
+	<!-- 获取健康问卷下客户上传的影像资料 addby linyongtao-->
+	<resultMap id="getimageUrlsMap" type="com.hualife.wxhb.api.rest.message.pojo.ImageInfo">	
+		<result property="image_id" column="image_id" />
+		<result property="image_type" column="image_type" />
+		<result property="image_url" column="image_url" />
+	</resultMap>
+	<!-- 获取健康问卷下客户上传的影像资料 addby linyongtao-->
+	<select id="getHealthReportImageInfo" parameterType="java.util.HashMap" resultMap="getimageUrlsMap">
+ 		select  i.image_id ,
+ 		        i.image_type,
+ 		        CONCAT(i.image_file,i.image_name) image_url   
+ 		  from  t_note_image i 
+ 		 where  i.note_id =#{noteId}
+		   and  i.note_type =#{notetype}
+		   and  i.image_type in (#{imageTypePictures},#{imageTypeSignature})
+		   and  i.image_status =#{imageStatus}
+	</select>
+	
+	<!-- 查询TNoteHealthNote add by yangpeixin -->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNoteHealthNote" id="getTNoteHealthNoteMap">
+		<result column="health_note_id" property="healthNoteId"/>
+		<result column="client_name" property="clientName"/>
+		<result column="client_age" property="clientAge"/>
+		<result column="client_sex" property="clientSex"/>
+		<result column="special_desc" property="specialDesc"/>
+		<result column="other_invest" property="otherInvest"/>
+		<result column="agent_remark_desc" property="agentRemarkDesc"/>
+	</resultMap>
+	<select id="getTNoteHealthNote"  parameterType="java.lang.String"  resultMap="getTNoteHealthNoteMap" >			  
+			select	*
+			  from  t_note_health_note
+			  where health_note_id = #{id} 
+	</select>	
+	<!-- 查询客户是否已完成健康问卷 addby linyongtao-->
+	<select id="getIsFinishHealthReport" parameterType="java.util.HashMap" resultType="java.lang.String">
+		select note_item_status 
+		  from t_note_health_note_item h ,
+		       t_note_client_note c 
+		 where c.client_note_id = h.health_note_id 
+		   and c.note_id =#{noteId}
+		   and c.note_type =#{noteType}  
+		   and c.note_status_valid = 'Y'
+		   and h.note_item_type =#{noteItemType}
+	</select>
+	<!-- 通过ClientNoteId 获取当前的健康问卷类型 -->
+	<resultMap id = "getTNoteHealthNoteItemMap" type = "com.hualife.wxhb.domain.entity.TNoteHealthNoteItem">
+		<result column="health_note_id" property="healthNoteId"/>
+		<result column="note_item_id" property="noteItemId"/>
+		<result column="note_item_type" property="noteItemType"/>
+		<result column="note_item_status" property="noteItemStatus"/>
+	</resultMap>
+	<select id = "getTNoteHealthNoteItem" parameterType="java.lang.String" resultMap = "getTNoteHealthNoteItemMap">
+		select * 
+			from t_note_health_note_item 
+		where health_note_id = #{id}
+	</select>
+<!-- ClientNoteId  -->
+	<select id="findClinetId"  parameterType="java.util.HashMap" resultType="java.lang.String">
+		select client_note_id
+		  from t_note_client_note
+		 where note_type =#{type}
+		 and   note_id =#{noteId}
+		 and   note_status_valid = 'Y'
+	</select><!-- 查询客户是否已提交财务问卷   addby linyongtao-->
+	<select id="getHealthReportContents" parameterType="java.lang.String" resultType="java.lang.Long">
+		select count(1) 
+		  from t_note_health_note_item_answer  
+		 where note_item_id =#{noteItemId}			
+	</select>
+	<!-- 删除客户已提交的财务问卷  addby linyongtao-->
+	<delete id="deleteHealthReportContents" parameterType="java.lang.String" >
+		delete 
+		  from  t_note_health_note_item_answer 
+		 where  note_item_id =#{noteItemId}	
+	</delete>
+	<!-- 更改健康问卷的完成状态  addby linyongtao-->
+    <update id="updateHealthReportStatus"  parameterType="java.util.HashMap">  
+       	 update t_note_health_note_item 
+       	    set note_item_status =#{noteItemStatus}
+       	  where health_note_id =#{clientNoteId}
+       	    and note_item_id =#{noteItemId}
+	</update></mapper>

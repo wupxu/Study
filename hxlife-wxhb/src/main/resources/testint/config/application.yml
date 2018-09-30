@@ -1,0 +1,11 @@
+server:
+    port: 8081
+    start-timeout: 100000
+spring:
+    main:
+        banner-mode: "off"
+system:
+    name: "WXHB"
+    is_attestation: "off"
+logging:
+    config: classpath:config/log4j2.xml

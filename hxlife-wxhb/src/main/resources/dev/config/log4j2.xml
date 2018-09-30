@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+ 
+<Configuration status="WARN" xmlns:xi="http://www.w3.org/2001/XInclude" name="XIncludeDemo" >
+	<properties>
+		<property name="LOG_HOME">/home/hualife/wxhbLog
+		</property>
+		<property name="DIAGNOSIS_SYSTEM_FILE_NAME">diagnosis_system_file</property>
+		<property name="AUDIT_FILE_NAME">audit_file</property>
+		<property name="DIAGNOSIS_BUSINESS_FILE_NAME">diagnosis_business_file</property>
+		<property name="STATISTICS_FILE_NAME">statistics_file</property>
+		<property name="MESSAGE_FILE_NAME">message_file</property>
+	</properties>
+	
+	<Appenders>
+	<Console name="Console" target="SYSTEM_OUT">
+		<PatternLayout
+			pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} %l - %msg%n" />
+	</Console>
+	<RollingRandomAccessFile name="MessageLogAppender"
+		fileName="${LOG_HOME}/${MESSAGE_FILE_NAME}.log"
+		filePattern="${LOG_HOME}/$${date:yyyy-MM}/${MESSAGE_FILE_NAME}-%d{yyyy-MM-dd HH-mm}-%i.log">
+		<PatternLayout
+			pattern="@@[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%t] [%-5level] [%logger{36}] [%l] %msg%n" />
+		<Policies>
+			<TimeBasedTriggeringPolicy interval="1" />
+			<SizeBasedTriggeringPolicy size="1 KB" />
+		</Policies>
+		<DefaultRolloverStrategy max="20" />
+	</RollingRandomAccessFile>
+	<RollingRandomAccessFile name="DiagnosisSystemLogAppender"
+		fileName="${LOG_HOME}/${DIAGNOSIS_SYSTEM_FILE_NAME}.log"
+		filePattern="${LOG_HOME}/$${date:yyyy-MM}/${DIAGNOSIS_SYSTEM_FILE_NAME}-%d{yyyy-MM-dd HH-mm}-%i.log">
+		<PatternLayout
+			pattern="@@[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%t] [%-5level] [%logger{36}] [%l] %msg%n" />
+		<Policies>
+			<TimeBasedTriggeringPolicy interval="1" />
+			<SizeBasedTriggeringPolicy size="1 KB" />
+		</Policies>
+		<DefaultRolloverStrategy max="20" />
+	</RollingRandomAccessFile>
+	<RollingRandomAccessFile name="DiagnosisBusinessLogAppender"
+		fileName="${LOG_HOME}/${DIAGNOSIS_BUSINESS_FILE_NAME}.log"
+		filePattern="${LOG_HOME}/$${date:yyyy-MM}/${DIAGNOSIS_BUSINESS_FILE_NAME}-%d{yyyy-MM-dd HH-mm}-%i.log">
+		<PatternLayout
+			pattern="@@[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%t] [%-5level] [%logger{36}] [%l] %msg%n" />
+		<Policies>
+			<TimeBasedTriggeringPolicy interval="1" />
+			<SizeBasedTriggeringPolicy size="1 KB" />
+		</Policies>
+		<DefaultRolloverStrategy max="20" />
+	</RollingRandomAccessFile>
+	<RollingRandomAccessFile name="StatisticsLogAppender"
+		fileName="${LOG_HOME}/${STATISTICS_FILE_NAME}.log"
+		filePattern="${LOG_HOME}/$${date:yyyy-MM}/${STATISTICS_FILE_NAME}-%d{yyyy-MM-dd HH-mm}-%i.log">
+		<PatternLayout
+			pattern="@@[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%t] [%-5level] [%logger{36}] [%l] %msg%n" />
+		<Policies>
+			<TimeBasedTriggeringPolicy interval="1" />
+			<SizeBasedTriggeringPolicy size="1 KB" />
+		</Policies>
+		<DefaultRolloverStrategy max="20" />
+	</RollingRandomAccessFile>
+</Appenders>
+
+	<Loggers>
+	<Logger name="com.springframework" level="debug" additivity="false">
+		<AppenderRef ref="Console" />
+	</Logger>
+	<Logger name="org.mybatis" level="info" additivity="false">
+		<AppenderRef ref="Console" />
+	</Logger>
+	<Logger name="com.hualife" level="debug" additivity="false">
+		<AppenderRef ref="Console" />
+	</Logger>
+	<Root level="info">
+		<AppenderRef ref="Console" />
+	</Root>
+	</Loggers>
+</Configuration>

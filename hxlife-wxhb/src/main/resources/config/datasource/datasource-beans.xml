@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/context
+        http://www.springframework.org/schema/context/spring-context.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd
+        http://www.springframework.org/schema/tx
+        http://www.springframework.org/schema/tx/spring-tx.xsd">
+	<bean id="dataSourceNewbiz" class="com.alibaba.druid.pool.DruidDataSource"
+		init-method="init" destroy-method="close" parent="dataSourceDefautValue">
+		<!-- 基本属性 url、user、password -->
+		<!-- <property name="url" value="jdbc:mysql://10.0.18.70:3306/test?allowMultiQueries=true" />
+		<property name="username" value="batch" />
+		<property name="password" value="batch" /> -->
+		
+		<property name="url" value="jdbc:mysql://rdsblktby12afajdm6ul.mysql.rds.aliyuncs.com:3306/wxhb_dev?allowMultiQueries=true" />
+		<property name="username" value="wxhb_dev" />
+		<property name="password" value="ZhanYiLong123" /> 
+	</bean>
+	
+	<!-- <bean id="dataSourceClaim" class="com.alibaba.druid.pool.DruidDataSource"
+		init-method="init" destroy-method="close" parent="dataSourceDefautValue">
+		基本属性 url、user、password
+		<property name="url" value="jdbc:mysql://localhost:3306/claim" />
+		<property name="username" value="claim" />
+		<property name="password" value="claim" />
+	</bean> -->
+	
+</beans>

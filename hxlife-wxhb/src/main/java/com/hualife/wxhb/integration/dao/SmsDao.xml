@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.hualife.wxhb.integration.dao.SmsDao">
+	<!--查询验证码 addby yangpeixn-->
+	<select id="phoneCode" 
+		parameterType="java.util.HashMap"
+		resultType="java.lang.String">
+			select   code 
+			  from   t_note_smscode 
+			 where   isused =#{isused}	
+			   and   mobile = #{phone}					
+		</select>
+	<!--短信验证更状态 addby yangpeixn-->
+	 <update id="updateCode" parameterType="java.util.HashMap">
+		 update   t_note_smscode 
+			set   isused =#{isused}
+		  where   mobile = #{phone} 
+		    and   code = #{code} 	
+	</update>
+	<!--更改主表状态 addby yangpeixn-->
+	<update id="updateMain" parameterType="java.util.HashMap">
+	 update   t_note_main
+		set   phone_success = #{phoneSuccess}
+	  where   note_id = #{id}
+	 </update>
+	
+	<!--查询手机号 addby yangpeixn-->
+	<select id="findPhone" 	parameterType="java.lang.String" resultType="java.lang.String">
+			select   applicant_phone 
+			  from   t_note_main  
+			  where  note_id =#{id}	
+			  					
+	</select>
+	
+	<!--更改失效状态 addby yangpeixn-->
+	<update id="updateSms" parameterType="java.util.HashMap">
+	 update   t_note_smscode
+		set   isused = #{isused}
+	  where   mobile = #{phone}
+	    and   isused=#{status}
+	</update>
+	<!--插入数据 addby yangpeixn-->
+	<insert id="addSms" parameterType="java.util.HashMap">
+		 insert into t_note_smscode
+					   (id,mobile,code,isused,
+					   validity_date,create_date,update_date
+					    )
+				 values
+					   (#{id},#{phone},#{code},#{isused},
+					   #{validity_date},#{create_date},#{create_date}
+					   )
+	</insert>
+	<!--查询有效时间 addby yangpeixn-->
+	<select id="findTime" parameterType="java.util.HashMap" resultType="java.util.Date">
+		select   validity_date 
+		  from   t_note_smscode 
+		 where   isused =#{isused}	
+		   and   mobile = #{phone}					
+		</select>
+		
+</mapper>

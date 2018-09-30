@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-3.0.xsd">
+
+
+
+	<!-- 使用MethodInvokingJobDetailFactoryBean，任务类可以不实现Job接口，通过targetMethod指定调用方法 -->
+
+	<!-- <bean id="taskJob" class="com.hualife.wxhb.task.TestTask" />
+	<bean id="taskJob2" class="com.hualife.wxhb.task.TestTask2" />
+
+	<bean id="jobDetail"
+		class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="group" value="job_work" />
+		<property name="name" value="job_work_name" />
+		false表示等上一个任务执行完后再开启新的任务
+		<property name="concurrent" value="false" />
+		<property name="targetObject">
+			<ref bean="taskJob" />
+		</property>
+		<property name="targetMethod">
+			<value>run</value>
+		</property>
+	</bean>
+	
+	<bean id="jobDetail2"
+		class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="group" value="job_work" />
+		<property name="name" value="job_work_name2" />
+		false表示等上一个任务执行完后再开启新的任务
+		<property name="concurrent" value="false" />
+		<property name="targetObject">
+			<ref bean="taskJob2" />
+		</property>
+		<property name="targetMethod">
+			<value>run</value>
+		</property>
+	</bean>
+
+	调度触发器
+	<bean id="myTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="name" value="work_default_name" />
+		<property name="group" value="work_default" />
+		<property name="jobDetail">
+			<ref bean="jobDetail" />
+		</property>
+		<property name="cronExpression">
+			<value>0/10 * * * * ?</value>
+		</property>
+	</bean>
+
+	调度触发器
+	<bean id="myTrigger2"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="name" value="work_default_name2" />
+		<property name="group" value="work_default" />
+		<property name="jobDetail">
+			<ref bean="jobDetail2" />
+		</property>
+		<property name="cronExpression">
+			<value>0/30 * * * * ?</value>
+		</property>
+	</bean>
+
+	调度工厂
+	<bean id="scheduler"
+		class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="triggers">
+			<list>
+				<ref bean="myTrigger" />
+				<ref bean="myTrigger2" />
+			</list>
+		</property>
+	</bean> -->
+	<!-- 批处理推送影像 -->
+	<bean id="pushImageTaskJob" class="com.hualife.wxhb.task.ImageInfoTask" /> 
+	<!-- 推送企业号消息 -->
+	<bean id="noteInformAgentTaskJob" class="com.hualife.wxhb.task.NoteInformAgentTask" />
+	<!-- 函件打印  -->
+	<bean id="chooseTypeClientTaskJob" class="com.hualife.wxhb.task.NotePrintPushTask" />
+	<!-- 批处理推送函件信息  -->
+	<bean id="pushMessageTaskJob" class="com.hualife.wxhb.task.PushMessageTask" /> 
+	
+	
+	<bean id="noteInformAgentJobDetail"
+		class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="group" value="job_work" />
+		<property name="name" value="job_work_name1" />
+		<!--false表示等上一个任务执行完后再开启新的任务 -->
+		<property name="concurrent" value="false" />
+		<property name="targetObject">
+			<ref bean="noteInformAgentTaskJob" />
+		</property>
+		<property name="targetMethod">
+			<value>run</value>
+		</property>
+	</bean>
+	<!--  定义要调用的对象和对象的方法 -->
+	<bean id="chooseTypeClientJobDetail"
+		class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="group" value="job_work" />
+		<property name="name" value="job_work_name2" />
+	<!-- false表示等上一个任务执行完后再开启新的任务, true表示支持并发 -->
+		<property name="concurrent" value="true" />
+		<property name="targetObject">
+			<ref bean="chooseTypeClientTaskJob" />
+		</property>
+		<property name="targetMethod">
+			<value>run</value>
+		</property>
+	</bean>
+	<!-- 定义要调用的对象和对象的方法 -->
+	<bean id="pushMessageJobDetail"
+		class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="group" value="job_work" />
+		<property name="name" value="job_work_name3" />
+	<!-- false表示等上一个任务执行完后再开启新的任务, true表示支持并发 -->
+		<property name="concurrent" value="true" />
+		<property name="targetObject">
+			<ref bean="pushMessageTaskJob" />
+		</property>
+		<property name="targetMethod">
+			<value>run</value>
+		</property>
+	</bean>
+	<!-- 定义要调用的对象和对象的方法 -->
+	<bean id="pushImageTaskJobDetail"
+		class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="group" value="job_work" />
+		<property name="name" value="job_work_name4" />
+	<!-- false表示等上一个任务执行完后再开启新的任务, true表示支持并发 -->
+		<property name="concurrent" value="true" />
+		<property name="targetObject">
+			<ref bean="pushImageTaskJob" />
+		</property>
+		<property name="targetMethod">
+			<value>run</value>
+		</property>
+	</bean>
+	
+	<!-- 调度触发器 -->
+	<bean id="noteInformAgentTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="name" value="work_default_name1" />
+		<property name="group" value="work_default" />
+		<property name="jobDetail">
+			<ref bean="noteInformAgentJobDetail" />
+		</property>
+		<property name="cronExpression">
+			<value>0 0/1 * * * ?</value>
+		</property>
+	</bean>
+	<!-- 调度触发器 -->
+	<!-- 触发器：定义触发器执行的脚本的时间  -->
+	<bean id="chooseTypeClientTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="name" value="work_default_name2" />
+		<property name="group" value="work_default" />
+		<!-- 指定对象 -->
+		<property name="jobDetail">
+			<ref bean="chooseTypeClientJobDetail" />
+		</property>
+		<!-- 指定时间 -->
+		<property name="cronExpression">
+			<value>0 0/1 * * * ?</value>
+		</property>
+	</bean>
+	<!-- 调度触发器 -->
+	<!-- 触发器：定义触发器执行的脚本的时间 --> 
+	<bean id="pushMessageTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="name" value="work_default_name3" />
+		<property name="group" value="work_default" />
+		<!-- 指定对象 -->
+		<property name="jobDetail">
+			<ref bean="pushMessageJobDetail" />
+		</property>
+		<!-- 指定时间 -->
+		<property name="cronExpression">
+			<value>0 0/1 * * * ?</value>
+		</property>
+	</bean>
+	<!-- 调度触发器 -->
+	<!-- 触发器：定义触发器执行的脚本的时间 --> 
+	<bean id="pushImageTaskJobTrigger"
+		class="org.springframework.scheduling.quartz.CronTriggerFactoryBean">
+		<property name="name" value="work_default_name4" />
+		<property name="group" value="work_default" />
+		<!-- 指定对象 -->
+		<property name="jobDetail">
+			<ref bean="pushImageTaskJobDetail" />
+		</property>
+		<!-- 指定时间 -->
+		<property name="cronExpression">
+			<value>0 0/1 * * * ?</value>
+		</property>
+	</bean> 
+	
+	<!-- 调度工厂 -->
+	<bean id="scheduler"
+		class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="triggers">
+			<list>
+			<!-- 指定触发器 -->
+			<!-- <ref bean="pushImageTaskJobTrigger" />
+			<ref bean="chooseTypeClientTrigger" />
+			<ref bean="pushMessageTrigger" />
+			<ref bean="noteInformAgentTrigger" /> -->
+			</list>
+		</property>
+	</bean>
+</beans>

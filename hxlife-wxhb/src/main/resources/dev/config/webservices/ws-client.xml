@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:jaxws="http://cxf.apache.org/jaxws" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation=" http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd 
+	http://cxf.apache.org/jaxws http://cxf.apache.org/schemas/jaxws.xsd">
+	<!-- <jaxws:client id="helloClient" serviceClass="com.hualife.systemname.access.client.HelloClient" 
+		address="http://localhost:8081/soap-api/HelloWorld"> </jaxws:client> -->
+
+	<!-- <beans xmlns="http://www.springframework.org/schema/beans" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+		xmlns:jaxws="http://cxf.apache.org/jaxws" xsi:schemaLocation=" http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans.xsd http://cxf.apache.org/jaxws 
+		http://cxf.apache.org/schema/jaxws.xsd"> <bean id="client" class="com.hualife.services.HelloClient" 
+		factory-bean="clientFactory" factory-method="create" /> <bean id="clientFactory" 
+		class="org.apache.cxf.jaxws.JaxWsProxyFactoryBean"> <property name="serviceClass" 
+		value="com.hualife.services.HelloClient" /> <property name="address" value="http://localhost:8080/soap-api/HelloWorld" 
+		/> </bean> -->
+	<!-- 函件系统向核心系统推送函件打印信息的接口 -->
+	<jaxws:client id="uWTrans0233"
+		serviceClass="com.hualife.wxhb.integration.soap.UWTrans0233"
+		address="http://10.139.150.249:9990/com.hxlife.esb.inner.kernel.UWTrans0233">
+		<jaxws:handlers>
+			<ref bean="soapHeaderWrapper" />
+		</jaxws:handlers>
+		<jaxws:outInterceptors>
+			<ref bean="esbHttpHeaderWrapperInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	<!-- 函件系统向核心系统推送函件信息的接口 -->
+	<jaxws:client id="uWTrans0237"
+		serviceClass="com.hualife.wxhb.integration.soap.UWTrans0237"
+		address="http://10.139.150.249:9990/com.hxlife.esb.inner.kernel.UWTrans0237">
+		<jaxws:handlers>
+			<ref bean="soapHeaderWrapper" />
+		</jaxws:handlers>
+		<jaxws:outInterceptors>
+			<ref bean="esbHttpHeaderWrapperInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	<!-- 函件系统向核心推送下发方式的接口 -->
+	<jaxws:client id="uWTrans0238"
+		serviceClass="com.hualife.wxhb.integration.soap.UWTrans0238"
+		address="http://10.139.150.249:9990/com.hxlife.esb.inner.kernel.UWTrans0238">
+		<jaxws:handlers>
+			<ref bean="soapHeaderWrapper" />
+		</jaxws:handlers>
+		<jaxws:outInterceptors>
+			<ref bean="esbHttpHeaderWrapperInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+	<!-- 影像上传接口（互联网交易平台） -->
+	<jaxws:client id="Yx0191"
+		serviceClass="com.hualife.wxhb.integration.soap.Yx0191"
+		address="http://10.139.150.249:9990/com.hxlife.esb.inner.yx.Yx0191">
+		<jaxws:handlers>
+			<ref bean="soapHeaderWrapper" />
+		</jaxws:handlers>
+		<jaxws:outInterceptors>
+			<ref bean="esbHttpHeaderWrapperInterceptor" />
+		</jaxws:outInterceptors>
+	</jaxws:client>
+</beans>

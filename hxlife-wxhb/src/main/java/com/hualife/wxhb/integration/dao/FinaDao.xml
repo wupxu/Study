@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hualife.wxhb.integration.dao.FinaDao">
+ 
+	<!-- 问题卷信息 -->
+	<resultMap id="finaQuestionnaireMap"   type="com.hualife.wxhb.domain.dto.FinaItem">
+		<result column="note_item_id" property="noteItemId" jdbcType="VARCHAR"/>
+		<result column="note_item_type" property="noteItemType" jdbcType="VARCHAR"/>
+	</resultMap>
+	<!-- 影像信息 -->
+		<resultMap id="imageUrlsMap" type="com.hualife.wxhb.api.rest.message.pojo.ImageInfo">	
+			<result property="image_id" column="image_id" />
+			<result property="image_type" column="image_type" />
+			<result property="image_url" column="image_url" />
+		</resultMap>
+	<!-- 财务函初始化-查询影像集合 wupeixu -->
+	<select id="selectImages" resultMap="imageUrlsMap" parameterType="java.util.HashMap">	 
+		SELECT image_id, image_type, CONCAT(image_file, image_name) image_url
+		  FROM t_note_image 
+		 WHERE note_id = (SELECT note_id FROM t_note_main WHERE note_id = 
+	   (SELECT note_id 
+	      FROM t_note_client_note 
+	     WHERE client_note_id = #{finaNoteId} 
+	       AND note_status_valid = 'Y'))
+           AND image_status = #{validY}
+           AND note_type =  #{clientTypeFina}
+           AND image_type =  #{imageTypeFina}
+	</select>	
+	 <!-- 财务函初始化-查询具体财务问卷 wupeixu -->
+	<select id="selectFinaQuestionnaire"  resultMap="finaQuestionnaireMap"    parameterType="java.lang.String" >		
+		SELECT note_item_id ,note_item_type,note_item_status 
+          FROM t_note_fina_note_item 
+         WHERE fina_note_id = #{finaNoteId}
+	</select>
+    <!-- 财务函初始化 -查询客户 姓名 ，代理人姓名，代理人电话，代理人编号 wupeixu -->
+	<select id="selectFinaOccuInfoRespMes" resultType="com.hualife.wxhb.api.rest.message.response.FinaOccuInfoResponseMessage" parameterType="java.util.HashMap">
+	    SELECT agent_name,agent_phone,client_name,agent_no
+          FROM t_note_main 
+         WHERE note_id = #{noteId}
+	</select>
+	<!-- 财务函初始化 -查询客户层中的noteId wupeixu -->
+	<select id="selectFinaOccuInfoNoteId" resultType="java.lang.String" parameterType="java.lang.String">
+		SELECT c.note_id 
+		  FROM t_note_client_note c 
+		 WHERE c.client_note_id=#{finaNoteId}
+		   AND note_status_valid = 'Y'
+	</select>
+	<!-- 财务函初始化 -查询核保员特别说明，被保人证件类型，被保人证件号码，被保人电话 wupeixu -->
+	<select id="selectFinaOccuInfodesc" resultType="com.hualife.wxhb.api.rest.message.response.FinaOccuInfoResponseMessage" parameterType="java.lang.String">
+       SELECT o.special_desc,o.insured_id_type,o.insured_id_no,o.insured_phone
+         FROM t_note_fina_occu_note o
+        WHERE o.fina_note_id =#{finaNoteId}
+	</select>
+	<!-- 查询具体财务问卷 -->
+	<select id="selectFinaOccuInfoItem" resultType="com.hualife.wxhb.api.rest.message.response.FinaOccuInfoResponseMessage" parameterType="java.lang.String">
+		SELECT
+	    it.note_item_id ,it.note_item_type 
+	    FROM t_note_fina_note_item it
+		WHERE it.fina_note_id =#{finaNoteId}
+	</select>
+	 <!-- 客户上传/提交财务函  addby linyongtao-->
+	<update id="finaLetterSubmitClient"   parameterType="java.util.HashMap" >		
+		update  t_note_client_note t1  
+		   set  t1.note_status=#{noteStatus} ,
+			    t1.note_status_desc = #{noteStatusDesc},
+			    t1.note_client_status =#{noteClientStatus},
+			    t1.note_client_status_desc = #{noteClientStatusDesc},
+			    t1.note_agent_status = #{noteAgentStatus},
+			    t1.note_agent_status_desc = #{noteAgentStatusDesc}
+		 where  t1.client_note_id=#{clientNoteId}		 
+	</update>
+	
+	<!-- 客户转交代理人处理，代理人上传/提交财务函 addby linyongtao-->
+	<update id="finaLetterSubmitAgent"   parameterType="java.util.HashMap" >		
+		update  t_note_client_note t1,
+			    t_note_fina_occu_note f1 
+		   set  t1.note_status = #{noteStatus},
+			    t1.note_status_desc = #{noteStatusDesc},
+			    t1.note_agent_status = #{noteAgentStatus},
+			    t1.note_agent_status_desc = #{noteAgentStatusDesc},
+			    f1 .agent_remark_desc = #{agentRemarkDesc}	
+		 where  t1.client_note_id =f1.fina_note_id
+		   and	t1.client_note_id=#{clientNoteId}
+				 
+	</update>
+	
+	<!-- 查询客户层表t_note_client_note中各个函件的状态 addby linyongtao-->	
+	<!--实体类与表字段映射 -->	 
+ 	<resultMap id="selectOtherClientNoteStatusMap" type="com.hualife.wxhb.api.rest.message.pojo.NoteTypeAndStatus">
+		<result column="note_status" property="note_status" jdbcType="VARCHAR"/>
+		<result column="client_note_id" property="client_note_id" jdbcType="VARCHAR"/>
+		<result column="note_type" property="note_type" jdbcType="VARCHAR"/>			
+	</resultMap> 
+	<select id="selectOtherClientNoteStatus" resultMap="selectOtherClientNoteStatusMap"  parameterType="java.lang.String" >		
+		select 
+			t1.note_status ,
+			t1.note_type 
+		from 
+			t_note_client_note t1 
+		where 
+			note_id = 
+			(select note_id 
+		from 
+			t_note_client_note t2 
+		where 
+			t2.client_note_id =#{fina_note_id}) 	 
+	</select>
+	 	
+	<!-- 财务问卷部分 -->			
+	<!-- 根据请求参数中的note_item_id查询财务函id addby linyongtao-->
+	<select id="selectFinaNoteId" parameterType="java.lang.String" resultType="java.lang.String">
+ 		select  ft.fina_note_id 
+ 		  from  t_note_fina_note_item ft 
+ 		 where  ft.note_item_id =#{noteItemId}
+	</select>
+		
+	<!-- 财务问卷  保存 addby linyongtao-->	 
+	<insert id="finaReportSave" useGeneratedKeys="true" parameterType="java.util.List" >
+		insert into  t_note_fina_note_item_answer 
+			(note_item_id,item_question_id,item_question_name,item_question_answer,item_question_desc)
+		values		
+        <foreach  collection="list" index="index" item="item" separator=",">
+	    	(#{item.note_item_id},#{item.item_question_id},#{item.item_question_name},#{item.item_question_answer},#{item.item_question_desc})
+		</foreach> 
+	</insert>
+	<!--财务问卷提交后需要改变问卷回答状态(Y-已经完成，N-未完成)addby linyongtao-->
+	<update id="updateNoteItemStatus" parameterType="java.util.HashMap" >
+		update  t_note_fina_note_item f1 
+		   set  f1.note_item_status = #{noteItemStatus}
+		 where  f1.note_item_id = #{noteItemId}
+	</update>
+	<!-- 存储t_note_fina_occu_note表 --> 	
+	<insert id = "insertNoteFinaOccuNote" parameterType= "com.hualife.wxhb.domain.entity.TNoteFinaOccuNote">
+		insert into t_note_fina_occu_note (
+			fina_note_id,special_desc,insured_id_type,insured_id_no,insured_phone
+		)values(
+			#{finaNoteId},#{specialDesc},#{insuredIdType},#{insuredIdNo},#{insuredPhone}
+		)
+	</insert>
+	<!-- 函件t_note_fina_note_item 数据插入  add by zhanglong -->
+	<insert id= "insertNoteFinaItem" parameterType ="java.util.List">
+		<foreach close="" collection="list" index="index" item="item" open="" separator=";">
+			insert into t_note_fina_note_item (
+				fina_note_id,note_item_id,note_item_type,note_item_status
+			)values(
+				#{item.finaNoteId},#{item.noteItemId},#{item.noteItemType},#{item.noteItemStatus}
+			)
+		</foreach>
+	</insert>			
+	<!-- 获取高额报告书问卷和财务问卷下客户上传的影像资料 addby linyongtao-->
+	<resultMap id="getimageUrlsMap" type="com.hualife.wxhb.api.rest.message.pojo.ImageInfo">	
+		<result property="image_id" column="image_id" />
+		<result property="image_type" column="image_type" />
+		<result property="image_url" column="image_url" />
+	</resultMap>
+	<!-- 查询高额报告书问卷客户上传 的影像资料 addby linyongtao-->
+	<select id="getAgentReportImageInfo" parameterType="java.util.HashMap" resultMap="getimageUrlsMap">
+ 		select  i.image_id ,
+ 		        i.image_type,
+ 		        CONCAT(i.image_file,i.image_name) image_url   
+ 		  from  t_note_image i 
+ 		 where  i.note_id =#{noteId}
+		   and  i.note_type =#{notetype}
+		   and  i.image_type =#{imageType}
+		   and  i.image_status =#{imageStatus}
+	</select>
+	<!-- 查询财务函问卷客户上传 的影像资料 addby linyongtao-->
+	<select id="getFinaReportImageInfo" parameterType="java.util.HashMap" resultMap="getimageUrlsMap">
+ 		select  i.image_id ,
+ 		        i.image_type,
+ 		        CONCAT(i.image_file,i.image_name) image_url   
+ 		  from  t_note_image i 
+ 		 where  i.note_id =#{noteId}
+		   and  i.note_type =#{notetype}
+		   and  i.image_type in (#{imageTypePictures},#{imageTypeSignature})
+		   and  i.image_status =#{imageStatus}
+	</select>	
+	
+	<!-- 查询代理人是否已完成高额业务员报告书 addby linyongtao-->
+	<select id="getIsFinishAgentReport" parameterType="java.util.HashMap" resultType="java.lang.String">
+ 		select finish_agent_report 
+ 		  from t_note_client_note 
+ 		 where note_id =#{noteId} 
+ 		   and note_status_valid ='Y' 
+ 		   and note_type =#{noteType}		
+	</select>
+	
+	<!-- 查询客户是否已完成财务问卷 addby linyongtao-->
+	<select id="getIsFinishFinaReport" parameterType="java.util.HashMap" resultType="java.lang.String">
+		select note_item_status 
+		  from t_note_fina_note_item f ,
+		       t_note_client_note c 
+		 where c.client_note_id = f.fina_note_id 
+		   and c.note_id =#{noteId}
+		   and c.note_type =#{noteType}  
+		   and c.note_status_valid = 'Y'
+		   and f.note_item_type =#{noteItemType}
+	</select>
+	
+	<!-- 查询客户是否已提交财务问卷   addby linyongtao-->
+	<select id="getFinaReportContents" parameterType="java.lang.String" resultType="java.lang.Long">
+		select count(1) 
+		  from t_note_fina_note_item_answer  
+		 where note_item_id =#{noteItemId}			
+	</select>
+	<!-- 删除客户已提交的财务问卷  addby linyongtao-->
+	<delete id="deleteFinaReportContents" parameterType="java.lang.String" >
+		delete 
+		  from  t_note_fina_note_item_answer 
+		 where  note_item_id =#{noteItemId}	
+	</delete>	
+	
+	<!-- 更改财务问卷的完成状态  addby linyongtao-->
+    <update id="updateFinaReportStatus"  parameterType="java.util.HashMap">  
+       	  update t_note_fina_note_item 
+       	     set note_item_status =#{noteItemStatus} 
+       	   where fina_note_id =#{clientNoteId}
+       	     and note_item_id =#{noteItemId}   
+	</update>
+</mapper>

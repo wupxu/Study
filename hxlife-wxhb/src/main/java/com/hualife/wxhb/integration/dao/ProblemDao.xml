@@ -1,0 +1,435 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.hualife.wxhb.integration.dao.ProblemDao">
+	
+	<!-- 更新问题件对象处理状态 add by zhangweiwei -->
+	<update id="updateProblemObject" parameterType="java.util.HashMap" >
+		update t_note_problem_object a
+		   set a.problem_object_status = #{problem_object_status} 
+		 where a.problem_object_id = #{problem_object_id}
+	</update>
+	
+	<!-- 更新问题件主表状态  add  by zhangweiwei-->
+	<update id="updateProblemNote" parameterType="java.util.HashMap" >
+		update t_note_problem_note a 
+		   set a.note_status = #{note_status},
+			   a.note_status_desc = #{note_status_desc}
+		 where a.problem_note_id = #{problem_note_id}
+	</update>
+	
+	<!-- 批量更新问题件内容信息 zhanyl-->
+	<update id="batchUpdateProblemInfoList" parameterType="java.util.List" >
+		 <foreach close="" collection="list" index="index" item="item" open="" separator=";">
+			 update t_note_problem_detail a  
+	   		   set a.problem_answer=#{item.problem_answer} 
+	   		 where a.problem_seq=#{item.problem_seq}		
+			   and a.problem_object_id = #{item.problem_object_id}
+		 </foreach>
+	</update>
+	
+	
+	<!-- 更新函件主表状态  add  by zhangweiwei-->
+	<update id="updateMainNote" parameterType="java.util.HashMap" >
+		update t_note_main a 
+		   set a.note_status = #{note_status},
+		   	   a.updated_date=#{updated_date}	   
+		 where a.note_id = (select b.note_id 
+		                      from t_note_problem_note b 
+		                     where b.problem_note_id= #{problem_note_id})
+	</update>
+	<!-- 问题件列表初始化 查询代理人姓名，代理电话，投保人姓名，投保人电话，被保人姓名，投保人是否身份验证 wupeixu -->
+	<select id="selectProblemNolMes" resultType="com.hualife.wxhb.api.rest.message.response.ProblemInfoResponseMessage" parameterType="java.lang.String">	 
+    SELECT m.agent_name,m.agent_phone,m.applicant_phone,m.applicant_name as "applicationName",p.insured_name
+      FROM t_note_main m,t_note_problem_note p
+     WHERE m.note_id = p.note_id
+       AND p.problem_note_id = #{problemNoteId}
+	</select>
+	
+	<!-- 问题件查询影像信息  wupeixu-->
+	<resultMap id="imageUrlsMap" type="com.hualife.wxhb.api.rest.message.pojo.ImageInfo">	
+			<result property="image_id" column="image_index" />
+			<result property="image_type" column="image_type" />
+			<result property="image_url" column="image_url" />
+		</resultMap>
+
+	<select id="getProbinfoImages" resultMap="imageUrlsMap" parameterType="java.util.HashMap">	 
+	SELECT image_id image_index, image_type, CONCAT(image_file, image_name) image_url
+      FROM t_note_image
+     WHERE note_id = (
+	       SELECT note_id
+	         FROM t_note_problem_note
+	        WHERE problem_note_id = #{problemNoteId})      
+	   AND image_status = #{validY}
+	   AND note_type =  #{noteTypeProblem}
+	</select>
+	
+	<!-- 问题件初始化 查询内层集合 add by wupeixu-->
+	<select id="selectProblemDescs" resultType="com.hualife.wxhb.domain.dto.ProblemDetail" parameterType="java.util.HashMap">	 
+     SELECT d.problem_desc,d.problem_object_id
+       FROM t_note_problem_detail d
+      WHERE d.problem_object_id =
+            (SELECT o.problem_object_id 
+		       FROM t_note_problem_object o
+		      WHERE problem_note_id =#{problemNoteId}
+                AND problem_object =#{problemObject}
+	    )
+	</select>	
+	<resultMap id="baseResultMap" type="com.hualife.wxhb.domain.dto.ProblemObj">
+		<result column="problem_object_status" property="problemObjectStatus"/>
+		<result column="problem_object" property="problemObject"/>
+	</resultMap>
+	<!-- 问题件初始化 查询外层集合 add by wupeixu-->
+	<select id="selectProblemObjects" resultType="com.hualife.wxhb.domain.dto.ProblemObj" parameterType="java.lang.String">	 
+   SELECT o.problem_object_status,o.problem_object,o.problem_object_id
+     FROM t_note_problem_object o
+    WHERE o.problem_note_id = #{problemNoteId}
+	</select>
+	<!-- 问题件次品单提交，更改t_note_main和t_note_problem_note 两个表的note_status，为已处理 -->
+	<update id="updateNoteStatus" parameterType="java.util.HashMap" >
+		update 
+			t_note_main m,
+			t_note_problem_note p 
+		set 
+			m.note_status = #{noteStatusMain},
+		    p.note_status = #{noteStatusProblem},
+			p.note_status_desc = #{noteStatusDesc}
+		where
+		    m.note_id = p.note_id
+			and m.note_id = #{noteId}
+			and m.note_type =#{noteType}	
+	</update>
+<!-- 回销问题件  更新问题件信息  add by zhangweiwei -->
+	<update id="updateProblemNoteStatus"  parameterType="java.util.HashMap">
+		update  t_note_problem_note  
+	 	   set  note_status=#{problem_note_status}, 
+	            note_status_desc=#{problem_note_status_desc}      
+	     where  note_id = #{note_id}  
+	</update>
+	<!-- 回销问题件  更新函件主表信息 add by zhangweiwei -->
+	<update id="upateMainNoteStatus"  parameterType="java.util.HashMap">
+		update  t_note_main 
+	       set  note_status=#{note_status}
+	     where note_id =#{note_id}
+	</update>
+	<!-- 次品单原因存储 addby yangpeixinx -->
+	<update id="updatNoteNotQualifiedReason"   parameterType="java.util.HashMap">
+		 update    t_note_problem_note  
+		    set    not_qualified_reason= #{reason} , 
+		           is_not_qualified_note = #{value},
+		           note_status = #{noteStatus}, 
+		           note_status_desc = #{noteStatusDesc}
+		   where   note_id = #{noteid}	
+		     and   note_seq = #{noteSeq}
+	</update>
+	
+	
+	<!-- 问题重新下发 -->
+	<update id="updatNoteSecondReason"   parameterType="hashmap">
+	 update t_note_problem_note  
+	 set second_reason= #{reason} , is_second_note = 'Y'
+	 where note_id = #{noteid}	
+	</update>
+	
+	<!-- 重新下发状态   addby yangpeixin-->
+	<update id="updateNoteSecond" parameterType="String">
+	       update   t_note_problem_note
+			  set   note_status = #{status} , 
+			        note_status_desc = #{statusDesc},
+			        updated_date = #{time}
+	     	where   note_id = #{noteid}  
+	
+	</update>
+	<!-- 重新下发查询  addby yangpeixin -->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNoteProblemNote" id="findNoteSecondMap">
+		<result column="note_id" property="noteId"/>
+		<result column="problem_note_id" property="problemNoteId"/>
+		<result column="apply_bar_code" property="applyBarCode"/>
+		<result column="note_bar_code" property="noteBarCode"/>
+		<result column="application_no" property="applicationNo"/>
+		<result column="application_name" property="applicationName"/>
+		<result column="insured_no" property="insuredNo"/>
+		<result column="insured_age" property="insuredAge"/>
+		<result column="insured_name" property="insuredName"/>
+		<result column="note_status" property="noteStatus"/>
+		<result column="note_status_desc" property="noteStatusDesc"/>
+		<result column="note_reason" property="noteReason"/>
+		<result column="agent_no" property="agentNo"/>
+		<result column="agent_name" property="agentName"/>
+		<result column="branch_code" property="branchCode"/>
+		<result column="created_date" property="createdDate"/>
+		<result column="updated_date" property="updatedDate"/>
+		<result column="Deciding_date" property="decidingDate"/>
+		<result column="note_seq" property="noteSeq"/>
+		<result column="is_not_qualified_note" property="isNotQualifiedNote"/>
+		<result column="not_qualified_reason" property="notQualifiedReason"/>
+		<result column="is_second_note" property="isSecondNote"/>
+		<result column="second_reason" property="secondReason"/>
+	</resultMap>
+	
+	<select id="findNoteSecond"  parameterType="String"  resultMap="findNoteSecondMap" >
+		select	*
+		  from  t_note_problem_note 
+		where note_id = #{id} 
+	</select>
+	
+	<!-- t_note_problem_note 表更新  add by zhanglong-->
+	<insert id = "insertNoteProblem" parameterType = "java.util.List">
+		<foreach close="" collection="list" index="index" item="item" open="" separator=";">
+			insert into t_note_problem_note(
+				note_id,problem_note_id,apply_bar_code,note_bar_code,
+				application_no,application_name,insured_no,insured_age,
+				insured_name,note_status,note_status_desc,note_reason,
+				agent_no,agent_name,branch_code,created_date,
+				updated_date,Deciding_date,note_seq,
+				is_not_qualified_note,not_qualified_reason,is_second_note,
+				second_reason
+			)values(
+				#{item.noteId},#{item.problemNoteId},#{item.applyBarCode},#{item.noteBarCode},
+				#{item.applicationNo},#{item.applicationName},#{item.insuredNo},#{item.insuredAge},
+				#{item.insuredName},#{item.noteStatus},#{item.noteStatusDesc},#{item.noteReason},
+				#{item.agentNo},#{item.agentName},#{item.branchCode},#{item.createdDate},
+				#{item.updatedDate},#{item.decidingDate},#{item.noteSeq},
+				#{item.isNotQualifiedNote},#{item.notQualifiedReason},#{item.isSecondNote},
+				#{item.secondReason}
+			)
+		</foreach>
+	</insert>
+	
+	<!-- t_note_problem_object 表更新  add by zhanglong-->
+	<insert id = "insertNoteProblemObject" parameterType ="java.util.List">
+		<foreach close="" collection="list" index="index" item="item" open="" separator=";">		
+			insert into t_note_problem_object(
+				problem_note_id,problem_object_id,problem_object,problem_object_status
+			)values(
+				#{item.problemNoteId},#{item.problemObjectId},#{item.problemObject},#{item.problemObjectStatus}
+			)
+		</foreach>
+	</insert>
+	<!-- 查询问题件的信息 add by zhangweiwei -->
+	<select id="countProblemNoteByNoteId" resultType="java.lang.String" parameterType="java.lang.String">	 
+  		select note_id
+     	  from t_note_problem_note
+         where problem_note_id=#{problemNoteId}
+	</select><!-- 查询问题件次品单下发原因 -->
+	<select id="selectProblemNotQualifiedReason" resultType="java.lang.String" parameterType="java.util.HashMap">	 
+		select 
+			tnp.not_qualified_reason 
+		from 
+			t_note_problem_note tnp 
+		where 
+			tnp.note_id =#{noteId}
+			and tnp.is_not_qualified_note = #{isNotQualifiedNote}
+	</select>
+	<!-- 投保人是否身份验证 add by wupeixu -->
+	<select id="selectPhoneSuccess" resultType="java.lang.String" parameterType="java.lang.String">	 
+  		SELECT phone_success 
+  		  FROM t_note_main 
+  		 WHERE  note_id=(
+              SELECT note_id 
+                FROM t_note_problem_note 
+               WHERE problem_note_id = #{problemNoteId})
+	</select>
+
+	<!-- 批处理推送函件查询核保任务序号 投保单号 是否为次品单 是否重新下发 wupeixu-->
+	<resultMap id="pushMessageMap" type="com.hualife.wxhb.domain.dto.PushMessage">
+		<result column="note_seq" property="note_seq"/>
+		<result column="apply_bar_code" property="apply_bar_code"/>
+		<result column="is_not_qualified_note" property="is_not_qualified_note"/>
+		<result column="is_second_note" property="is_second_note"/>
+	</resultMap>
+	<select id="getNoteSeqAndCode" resultType="com.hualife.wxhb.domain.dto.PushMessage" parameterType="java.util.HashMap">	 
+       SELECT note_seq ,apply_bar_code,is_not_qualified_note,is_second_note
+         FROM t_note_problem_note
+        WHERE note_id=#{noteId} 
+	</select>
+	<!-- 批处理推送函件查询问题集合 wupeixu-->
+	<resultMap id="problemObjectMap"    type="com.hualife.wxhb.integration.soap.message.request.pushMessage.PushMessageBodyProblemObject">
+		<result column="problem_object" property="problemObject" jdbcType="VARCHAR"/>
+		<result column="problem_seq" property="problemSeq" jdbcType="VARCHAR"/>
+		<result column="problem_answer" property="problemAnswer" jdbcType="VARCHAR"/>
+	</resultMap>
+	<select id="getproblemObjectDetails" resultMap="problemObjectMap" parameterType="java.util.HashMap">	 
+       SELECT d.problem_seq, d.problem_answer ,o.problem_object
+         FROM t_note_problem_detail d,t_note_problem_object o
+        WHERE d.problem_object_id = o.problem_object_id
+          AND d.problem_object_id IN (
+              SELECT problem_object_id  
+                FROM t_note_problem_object
+               WHERE problem_note_id = (
+                     SELECT problem_note_id  
+                       FROM t_note_problem_note
+                      WHERE  note_id= #{noteId}
+                      ) AND problem_object 
+                         IN (SELECT problem_object  
+                               FROM t_note_problem_object
+        					  WHERE problem_note_id = (
+              						SELECT problem_note_id   
+                					  FROM t_note_problem_note
+               						 WHERE  note_id= #{noteId}
+               						 )
+       )
+       )
+	</select>
+	<!-- 批处理推送函件查询对象集合 wupeixu-->
+	<select id="getProblemObject" resultMap="problemObjectMap" parameterType="java.util.HashMap">	 
+       SELECT problem_object  
+         FROM t_note_problem_object
+        WHERE problem_note_id = (
+              SELECT problem_note_id   
+                FROM t_note_problem_note
+               WHERE  note_id= #{noteId}
+       )
+	</select>
+	<!-- 批处理推送函件-问题件信息存储到t_task_push_note_info表  wupeixu-->
+	<insert id="pushProblemMessageToTable" parameterType="java.util.HashMap">	 
+         INSERT INTO t_task_push_note_info
+                (note_id,note_type,note_push_status,create_date,update_date) 
+         VALUES (#{noteId},#{noteType},#{pushStatusUnsend},#{createTime},#{updateTime}) 
+	</insert>
+
+	<!-- 问题件次品单上传页面初始化，查询客户上传的影像资料 -->
+	<resultMap id="selectImageInfoMap" type="com.hualife.wxhb.api.rest.message.pojo.ImageInfo">
+		<result column="image_id" property="image_id" jdbcType="VARCHAR"/>	
+		<result column="image_type" property="image_type" jdbcType="VARCHAR"/>	
+		<result column="image_url" property="image_url" jdbcType="VARCHAR"/>		
+	</resultMap>
+	<select id="selectProblemNotQualifiedImage"  parameterType="java.util.HashMap" resultMap="selectImageInfoMap" >	 			
+		SELECT  i.image_id ,
+				i.image_type ,
+				concat(image_file,image_name) image_url
+		  FROM  t_note_image i
+		 WHERE  i.note_id = #{noteId}
+		   AND  i.note_type = #{noteType}	
+		   AND  i.image_status =#{imageStatus}			
+	</select>
+	
+	<!-- t_note_problem_detail 表数据插入 add by zhanglong -->
+	<insert id = "insertTNoteProblemDetail" parameterType = "java.util.List">
+		<foreach close="" collection="list" index="index" item="item" open="" separator=";">		
+			insert into t_note_problem_detail(
+				problem_object_id,problem_seq,problem_desc,
+				problem_answer,problem_Column,created_date
+			)values(
+				#{item.problemObjectId},#{item.problemSeq},#{item.problemDesc},
+				#{item.problemAnswer},#{item.problemColumn},#{item.createdDate}
+			)
+		</foreach>
+	</insert>
+		<!-- 根据核保任务号、核保序号、函件类型获取客户层id   add  by  zhangweiwei-->
+	<select id="getNoteIdByBody"  parameterType="java.util.HashMap" resultType="com.hualife.wxhb.domain.entity.TNoteProblemNote" >	 			
+		<![CDATA[ 
+			SELECT	n.note_id,n.problem_note_id
+		  	  FROM	t_note_main m,t_note_problem_note n
+		     WHERE	m.note_id = n.note_id
+		       AND  m.task_code = #{task_code}
+		       AND  n.note_seq = #{note_seq}
+		       AND  m.note_status<>#{note_status}
+		       AND	n.note_status=#{noteStatus}
+		]]>			
+	</select>
+		<!-- 问题件对象 获取问题件信息   add  by  zhangweiwei-->
+	<select id="getProblemObjectIdByNoteId"  parameterType="java.util.HashMap" resultType="com.hualife.wxhb.api.rest.message.pojo.ProblemNoteInfo" >	 			
+		select  m.problem_object_id,n.note_id 
+		  from  t_note_problem_object m,t_note_problem_note n
+		 where 	m.problem_note_id=#{problem_note_id}
+		  and   m.problem_note_id=n.problem_note_id
+		  and  m.problem_object=#{problem_object}		
+	</select>
+	<!-- 批处理推送函件信息处理核心返回报文 查询问题对应note_id wupeixu-->
+	<select id="getProblemForNoteId"  parameterType="java.util.HashMap" resultType="java.lang.String" >	 			
+		SELECT m.note_id FROM t_note_main m , t_note_problem_note p 
+		 WHERE m.note_id = p.note_id
+           AND p.note_seq = #{noteSeq}	
+           AND m.task_code = #{pTaskCode}
+           AND P.apply_bar_code = #{applyNo}
+           AND P.note_status = #{problemNoteStatusDown}
+           <![CDATA[ 
+           AND m.note_status <> #{status}
+           ]]>		
+	</select>
+	<!-- 批处理推送函件信息处理核心返回报文 在t_task_push_note_info变更推送状态 wupeixu-->
+	 <update id="updatePushInfoStatus" parameterType="java.util.List">
+	    <foreach collection="list" item="item" index="index" open="" close="" separator=";">
+	     UPDATE t_task_push_note_info 
+	        SET note_push_status =#{item.resultType} ,update_date =#{item.time} 
+	      WHERE note_id =#{item.proNoteId}
+	        AND note_type =#{item.noteFromCoreTypeProblem}
+	    </foreach>
+	 </update>
+	 
+	 <!-- 查询是否问题件已经处理完成  add by zhanglong-->
+	 <select id = "selectnoteProblemExists" parameterType="java.util.Map" resultType="java.lang.String">
+	 	<![CDATA[
+	 	select count(*) 
+	 		from t_note_main a,t_note_client_relation_apply b 
+	 	where a.note_id = b.note_id 
+	 		and a.task_code = #{task_code} and a.note_type = #{note_type} 
+	 		and b.apply_bar_code = #{apply_bar_code} 
+	 		and a.note_status != #{note_stauts_finished}
+	 	]]>
+	 </select>
+	 
+	   <!-- 重新查询问题件对象  addby yangpeixin -->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNoteProblemObject" id="getTNoteProblemObjectMap">
+		<result column="problem_note_id" property="problemNoteId"/>
+		<result column="problem_object_id" property="problemObjectId"/>
+		<result column="problem_object" property="problemObject"/>
+		<result column="problem_object_status" property="problemObjectStatus"/>
+   </resultMap>
+	
+	
+	<select id="getTNoteProblemObject"  parameterType="String"  resultMap="getTNoteProblemObjectMap" >			  
+			select	* 
+			  from  t_note_problem_object 
+			  where problem_note_id = #{id} 
+	</select>
+
+	<!-- 重新下发查询问题件信息  addby yangpeixin -->
+	<resultMap type="com.hualife.wxhb.domain.entity.TNoteProblemDetail" id="getTNoteProblemDetailMap">
+		<result column="problem_object_id" property="problemObjectId"/>
+		<result column="problem_seq" property="problemSeq"/>
+		<result column="problem_desc" property="problemDesc"/>
+		<result column="problem_answer" property="problemAnswer"/>
+		<result column="problem_Column" property="problemColumn"/>
+		<result column="created_date" property="createdDate"/>
+	</resultMap>
+	
+	
+	<select id="getTNoteProblemDetail"  parameterType="String"  resultMap="getTNoteProblemDetailMap" >			  
+			select	*
+			  from  t_note_problem_detail 
+			  where problem_object_id = #{id} 
+	</select> 
+	<!-- 根据noteId查询问题件id  add by linyongtao-->
+	<select id = "getProblemNoteIdByNoteId" parameterType="java.lang.String" resultType="java.lang.String">
+		select p.problem_note_id 
+		  from t_note_problem_note p 
+		 where p.note_id =#{noteId}
+	 </select>
+	 <!-- 回销问题件  更新函件主表信息 add by zhangweiwei -->
+	<update id="updateMainNoteStatus"  parameterType="java.util.HashMap">
+		update  t_note_main 
+	 	   set  note_status=#{note_status}
+	     where  note_id =#{note_id}  
+	</update>
+	<!-- 查询info表里是否有重复数据 wupeixu-->
+	<select id="checkNoteMessage" parameterType="java.util.HashMap" resultType="java.lang.String">
+	select COUNT(1) 
+	 from t_task_push_note_info 
+	WHERE note_id =#{noteId}
+	  AND note_type  =#{noteType}
+	  AND note_push_status 
+	  IN (#{pushStatusFailed},#{pushStatusUnsend})
+	</select>
+	<!-- 根据核问题件id获取问题件对象个数   add  by  zhangweiwei-->
+	<select id="getProblemObjectCount"  parameterType="java.util.HashMap" resultType="java.lang.Integer" >	 			
+		<![CDATA[ 
+				 select  count(1) 
+		           from  t_note_problem_object 
+		          where  problem_note_id=#{problem_note_id}
+		            and  problem_object<>#{problem_object}
+		  ]]>		
+	</select>
+</mapper>
+
+
