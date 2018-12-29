@@ -1,0 +1,60 @@
+ hnssa829lyO1eBuK  linux密码
+edu——user：http://wupeixu@10.10.50.50/Gateway/education-app.git
+lgtk：登陆号17600206910-kf
+13693149564-dev
+测试环境：10.10.200.189 /home/admin/
+开发环境部署在10.10.200.165，
+测试环境构建后会自动部署在10.10.200.189上，目录都是/home/admin/下-----bp-admin和bp-web，
+edu-user在10.10.200.187
+http://10.10.200.151:8761/eureka/ 
+测试环境参数：-Dconfig_user=admin -Dconfig_password=20080623 -Dplatform_type=test -Deureka_uri=http://10.10.200.151:8761/eureka/ 
+开发环境参数：-Dconfig_user=admin -Dconfig_password=20080623 -Dplatform_type=dev -Deureka_uri=http://10.10.200.163:8761/eureka/,http://10.10.200.164:8761/eureka/,http://10.10.200.165:8761/eureka/
+
+地址：http://zkapisdev.lexue.com/bp/1/gs?&uid=6100015&moduleId=1111
+
+测试环境mongo：10.10.200.174:27017,10.10.200.175:27018,10.10.200.176:27018
+
+
+13683626680  111111  测试环境的   开发环境密码好像是123456
+
+	ORDER(1,"购买商品"), 
+	WATCH(2,"观看课程"),
+	SHARE(3,"分享商品"),
+	POST(4,"咖啡厅发贴"),
+	POSTHOT(5,"评为热贴"),
+	CMS(6,"后台增加"),
+	ACTIVITY(7,"活动"),
+线上：
+mongodb:
+服务器activitymongo1.lexue.inc\activitymongo2.lexue.inc\activitymongo1.lexue.inc
+use bp
+db.createUser({user:'Obp_user',pwd:'Obp_Pass2044', roles:[{role:'dbOwner', db:'bp'}]})
+
+mysql:
+10.10.40.202 basedb1.lexue.inc 默认3306 库名bp
+bp_user/bp_user =======/10.10.40.203 readonly_online/readonly_Abc123
+
+
+服务器：basedb1.lexue.inc
+从库：basedb2.lexue.inc
+服务器和域名对应表：10.10.40.200 activedb1.lexue.inc
+10.10.40.201 activedb2.lexue.inc
+10.10.40.202 basedb1.lexue.inc
+10.10.40.203 basedb2.lexue.inc
+10.10.40.204 orderdb1.lexue.inc
+10.10.40.205 orderdb2.lexue.inc
+10.10.40.210 basemongo1.lexue.inc baseredis1.lexue.inc
+10.10.40.211 basemongo2.lexue.inc baseredis2.lexue.inc
+10.10.40.212 basemongo3.lexue.inc baseredis3.lexue.inc
+10.10.40.215 membermongo1.lexue.inc memberredis1.lexue.inc
+10.10.40.216 membermongo2.lexue.inc memberredis2.lexue.inc
+10.10.40.217 membermongo3.lexue.inc memberredis3.lexue.inc
+10.10.40.220 activitymongo1.lexue.inc activityredis1.lexue.inc
+10.10.40.221 activitymongo2.lexue.inc activityredis2.lexue.inc
+10.10.40.222 activitymongo3.lexue.inc activityredis3.lexue.inc
+10.10.40.180 kafka1.lexue.inc eureka1.lexue.inc
+10.10.40.181 kafka2.lexue.inc eureka2.lexue.inc
+10.10.40.182 kafka3.lexue.inc eureka3.lexue.inc
+10.10.40.185 solr1.lexue.inc
+10.10.40.186 solr2.lexue.inc
+10.10.40.187 solr3.lexue.inc
